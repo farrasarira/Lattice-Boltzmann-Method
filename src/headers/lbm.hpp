@@ -7,13 +7,22 @@
     #include <string>
     #include <memory>
     #include "defines.hpp"
-    #include <eigen3/Eigen/Sparse>
-    #include <eigen3/Eigen/QR>
+    // #include <eigen3/Eigen/Sparse>
+    // #include <eigen3/Eigen/QR>
     #include "output.hpp"
     #include "cantera.hpp"
  
 
-    #ifdef D2Q9
+    #if defined D1Q3
+        const int ndim = 1;
+        const int npop = 3;
+        const double cx[3] = {0.0,+1.0,-1.0};
+        const double cy[3] = {0.0, 0.0, 0.0};
+        const double cz[3] = {0.0, 0.0, 0.0};
+        // D2Q9 weight factor | cs^2 = 1/3
+        const double wi[3]  = {4./6,1./6,1./6};
+
+    #elif defined D2Q9
         // D2Q9 velocity sets
         const int ndim = 2;
         const int npop = 9;
@@ -37,11 +46,8 @@
         const double cy[27] = {  0.0,  0.0,  0.0, +1.0, -1.0,  0.0,  0.0, +1.0, -1.0,  0.0,  0.0, +1.0, -1.0, -1.0, +1.0,  0.0,  0.0, +1.0, -1.0,  +1.0,  -1.0,  +1.0,  -1.0,  -1.0,  +1.0,  +1.0,  -1.0};
         const double cz[27] = {  0.0,  0.0,  0.0,  0.0,  0.0, +1.0, -1.0,  0.0,  0.0, +1.0, -1.0, +1.0, -1.0,  0.0,  0.0, -1.0, +1.0, -1.0, +1.0,  +1.0,  -1.0,  -1.0,  +1.0,  +1.0,  -1.0,  +1.0,  -1.0};
         const double wi[27] = {8./27,2./27,2./27,2./27,2./27,2./27,2./27,1./54,1./54,1./54,1./54,1./54,1./54,1./54,1./54,1./54,1./54,1./54,1./54,1./216,1./216,1./216,1./216,1./216,1./216,1./216,1./216};
+        const int opposite[27] = {0,2,1,4,3,6,5,8,7,10,9,12,11,14,13,16,15,18,17,20,19,22,21,24,23,26,25};
     #endif
-
-   
-
-    const int opposite[27] = {0,2,1,4,3,6,5,8,7,10,9,12,11,14,13,16,15,18,17,20,19,22,21,24,23,26,25};
 
     class LATTICE
     {
@@ -65,7 +71,6 @@
             double rhoe;                // density * total energy (E)
             double energy_flux[3] = {0., 0., 0.}; // heat flux
 
-
             // Third-order Moment Deviation
             double dQdevx = 0.0;
             double dQdevy = 0.0;
@@ -77,19 +82,24 @@
     {
         public:
             // ###### Momentum Kinetic Equation Parameter ######
-            double f[npop], fpc[npop];  // distribution function, distribution function post collistion  
-            double rho;                 // density
-            double u = 0.0;          // velocity in x-direction
-            double v = 0.0;          // velocity in y-direction
-            double w = 0.0;          // velocity in z-direction
             double X = 0.0;             // mole fraction
+            double rho = 0.0;           // density
+            // double rho_dot = 0.0;   // rate of formation/destruction during chemical reaction.
+            double Vdiff_x = 0.0;       // diffusion velocity in x direction               
+            double Vdiff_y = 0.0;       // diffusion velocity in y direction       
+            double Vdiff_z = 0.0;       // diffusion velocity in z direction
+            double delYx = 0.0;         // gradient of mass fraction in x direction
+            double delYy = 0.0;         // gradient of mass fraction in y direction
+            double delYz = 0.0;         // gradient of mass fraction in z direction
 
-            double rho_dot = 0.0;
-
-            // Mass fraction gradient
-            double delYx = 0.0;
-            double delYy = 0.0;
-            double delYz = 0.0;
+            #ifndef FD
+                double f[npop], fpc[npop];  // distribution function, distribution function post collistion  
+                double u = 0.0;     // velocity in x-direction
+                double v = 0.0;     // velocity in y-direction
+                double w = 0.0;     // velocity in z-direction
+            #elif defined FD
+                double rho_n = 0.0;        // mixture density * mass fraction
+            #endif
 
     };
 
@@ -102,16 +112,16 @@
             int Nx = 1;
             int Ny = 1;
             int Nz = 1;
-            int dt_sim = 1;
+            int dt_sim = 1.0;
             int nstep = 1000;
             int tout = 100;
 
             double nu = 0.001;      // kinematic viscosity
             double gas_const = 1.0; // gas constant
-            double prtl = 1.0;      // prantdl number
-            double gamma = 2.0;     // gamma (Cp/Cv)
+            double prtl = 0.5;      // prantdl number
+            double gamma = 1.4;     // gamma (Cp/Cv)
 
-            int nSpecies = 0;
+            size_t nSpecies = 0;
             std::vector<std::string> speciesName;
         
         public:
@@ -122,7 +132,7 @@
 
         public:
             // constructor
-            LBM(int Nx, int Ny, int Nz, double NU);
+            LBM(int Nx, int Ny, int Nz, double nu);
             LBM(int Nx, int Ny, int Nz, std::vector<std::string> species);
 
             // calculate moment
@@ -140,6 +150,8 @@
             // collision operator
             void Collide(); // BGK collision
             void Collide_Species();
+            void FD_species();
+            void FD_BC();
             
             // stream
             void Streaming();   
