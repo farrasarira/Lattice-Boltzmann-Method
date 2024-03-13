@@ -540,11 +540,11 @@ void main_setup() // SOD SHOCK TUBE WITH SI UNIT -------------------------------
 
 void main_setup() // Ternary Gas Diffusion --------------------------------------------------------
 {
-    int NX = 864; 
+    int NX = 200; 
     int NY = 1; 
     int NZ = 1;
     
-    double si_len = 2E-4;   // [m]
+    double si_len = 1E-4;   // [m]
     double si_u_max = 1E+3; // [m/s]
     double si_rho = 1.225;  // [kg/m^3]
     double si_temp = 300.0; // [K]
@@ -601,7 +601,7 @@ void main_setup() // Ternary Gas Diffusion -------------------------------------
         }
     }
 
-    lb.run(1000000000,10000);
+    lb.run(1000000000,1000);
 }
 
 

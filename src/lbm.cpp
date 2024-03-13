@@ -1136,10 +1136,40 @@ void LBM::Streaming()
                         double mix_mmass = gas->meanMolecularWeight();
                         double theta = gas->RT(); // universal_gas_const * temp
 
+                        auto trans = sols[rank]->transport();
+
                         int ld = gas->nSpecies();
                         std::vector<double> d(ld * ld);
-                        auto trans = sols[rank]->transport();
                         trans->getBinaryDiffCoeffs(ld, &d[0]);
+
+                        std::vector<double> spec_visc(ld);
+                        trans->getSpeciesViscosities(&spec_visc[0]);
+                        double visc_a[nSpecies] = {0.0};
+                        double tau_visc[nSpecies] = {0.0};
+
+                        double phi[nSpecies][nSpecies] = {0.0};
+                        for(size_t a = 0; a < nSpecies; ++a){                        
+                            for(size_t b = a; b < nSpecies; ++b){
+                                size_t idx_a = gas->speciesIndex(speciesName[a]);
+                                size_t idx_b = gas->speciesIndex(speciesName[b]);
+
+                                double factor1 = 1.0 + sqrt(spec_visc[idx_a]/spec_visc[idx_b]) * sqrt(sqrt(mmass[b]/mmass[a]));
+                                phi[a][b] = factor1*factor1 / sqrt(8.0*(1.0 + mmass[a]/mmass[b]));
+                                phi[b][a] = spec_visc[idx_b]/spec_visc[idx_a] * mmass[a]/mmass[b] * phi[a][b];
+                            }
+                        }             
+
+                        for(size_t a = 0; a < nSpecies; ++a){
+                            size_t idx_a = gas->speciesIndex(speciesName[a]);
+                            
+                            double denom = 0.0;
+                            for(size_t b = 0; b < nSpecies; ++b)
+                                denom = denom + species[b][i][j][k].X * phi[a][b];
+                            
+                            visc_a[a] = species[a][i][j][k].X * units.mu(spec_visc[idx_a]) / denom;
+                        }               
+
+                        // std::cout << visc_a[0]+visc_a[1]+visc_a[2] << " | " << units.mu(trans->viscosity()) << std::endl; 
 
                         for(size_t a = 0; a < nSpecies; ++a)
                         {                       
@@ -1152,6 +1182,12 @@ void LBM::Streaming()
                                 tau_ab[a][b] = units.t( (mmass[a]*mmass[b]/(mix_mmass*theta)) * D_ab[a][b] );
                                 // std::cout << " tau_ " <<  gas->speciesName(gas->speciesIndex(speciesName[a])) << "-" << gas->speciesName(gas->speciesIndex(speciesName[b])) << " : " << tau_ab[a][b] << std::endl;
                             }
+
+                            if(species[a][i][j][k].rho==0.0)
+                                continue;
+                            
+                            // double omega = 2*mixture[i][j][k].p*dt_sim / (mixture[i][j][k].p*dt_sim + 2*mu);  
+                            tau_visc[a] = visc_a[a]/(species[a][i][j][k].X * mixture[i][j][k].p);
                         }
                         
                         for(size_t a = 0; a < nSpecies; ++a)
@@ -1159,7 +1195,8 @@ void LBM::Streaming()
                             invtau_a[a] = 0.0;
                             for(size_t b = 0; b < nSpecies; ++b)
                             {                                
-                                invtau_a[a] += mass_frac[b] / tau_ab[a][b];  
+                                // invtau_a[a] += mass_frac[b] / tau_ab[a][b];  
+                                if(a != b) invtau_a[a] += mass_frac[b] / tau_ab[a][b];  
                             }
                         }
                         
@@ -1167,7 +1204,7 @@ void LBM::Streaming()
                         {
                             for(size_t b = 0; b < nSpecies; ++b)
                             {
-                                if (a == b) matrix_A.insert(a, b) = 1.0 + dt_sim * invtau_a[a] / 2.0 - dt_sim/2.0*mass_frac[a]/tau_ab[a][b];
+                                if (a == b) matrix_A.insert(a, b) = 1.0 + dt_sim * invtau_a[a] / 2.0;// - dt_sim/2.0*mass_frac[a]/tau_ab[a][b];
                                 else 
                                 {
                                     matrix_A.insert(a, b) = - dt_sim / 2.0 * mass_frac[b] / tau_ab[a][b];
@@ -1220,15 +1257,16 @@ void LBM::Streaming()
                             for(size_t a = 0; a < nSpecies; ++a)
                             {
                                 double F_a = 0.0;
-                                double beta = 0.0;
                                 for(size_t b = 0; b < nSpecies; ++b)
                                 {
-                                    F_a += mass_frac[a]/tau_ab[a][b]*(feq[b]-fstr[b]);
+                                    if(a != b) F_a += mass_frac[a]/tau_ab[a][b]*(feq[b]-fstr[b]);
                                 }
                                 
-                                beta = dt_sim / (2*(1/invtau_a[a]) + dt_sim);
+                                // beta = dt_sim / (2*(1/invtau_a[a]) + dt_sim);
+                                double tau_a = 1.0/invtau_a[a];
+                                double beta = dt_sim / (tau_a*tau_visc[a] + 0.5*dt_sim*tau_visc[a] + 0.5*dt_sim*tau_a);
 
-                                species[a][i][j][k].fpc[l] = species[a][i][j][k].f[l] + 2.0*beta*(feq[a]-species[a][i][j][k].f[l]) + dt_sim*(beta-1.0)*F_a;                               
+                                species[a][i][j][k].fpc[l] = species[a][i][j][k].f[l] + beta*tau_visc[a]*(feq[a]-species[a][i][j][k].f[l]) + beta*tau_a*(fstr[a]-species[a][i][j][k].f[l]) - beta*tau_visc[a]*tau_a*F_a;                               
                                 // species[a][i][j][k].fpc[l] = species[a][i][j][k].f[l] + omega[a]*(feq[a]-species[a][i][j][k].f[l]) + 2.0*beta*(feq[a]-species[a][i][j][k].f[l]) + dt_sim*(beta-1.0)*F_a;
                                 // std::cout << i << " || " << species[a][i][j][k].f[l] << " | " << species[a][i][j][k].fpc[l] << std::endl;
 
