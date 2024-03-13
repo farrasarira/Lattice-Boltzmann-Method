@@ -5,17 +5,20 @@
     #include"math_util.hpp"
     #include<math.h>
     
-    class Units_Conv { // contains the 3 base units m, kg, s for unit conversions and vtk output
+    class Units_Conv {  // contains the 3 base units m, kg, s for unit conversions
     private:
-        float m=1.0f, kg=1.0f, s=1.0f, K=1.0f; // 1 lattice unit times m/kg/s is meter/kilogram/seconds
+        float m=1.0f, kg=1.0f, s=1.0f, K=1.0f;  // 1 lattice unit times m/kg/s is meter/kilogram/seconds
     public:
         void set_m_kg_s(const float x, const float u, const float rho, const float temp, const float si_x, const float si_u, const float si_rho, const float si_temp) { // length x, velocity u, density rho in both simulation and SI units
-            m = si_x/x; // length si_x = x*[m]
-            kg = si_rho/rho*cb((double)m); // density si_rho = rho*[kg/m^3]
-            s = m * u/si_u; // velocity si_u = u*[m/s]
-            K = si_temp/temp; // temperature
+            m = si_x/x;                     // length si_x = x*[m]
+            kg = si_rho/rho*cb((double)m);  // density si_rho = rho*[kg/m^3]
+            s = m * u/si_u;                 // velocity si_u = u*[m/s]
+            K = si_temp/temp;               // temperature
 
             std::cout << "dt* : " << s << std::endl;
+            std::cout << "dx* : " << m << std::endl;
+            std::cout << "speed limit : " << (double) m / s << std::endl;
+
         }
         void set_m_kg_s(const float m, const float kg, const float s, const float K) { // do unit conversion manually
             this->m = m;
@@ -35,7 +38,8 @@
         float omega(const float si_omega) const { return si_omega*s; } // frequency si_omega = omega/[s]
         float u(const float si_u) const { return si_u*s/m; } // velocity si_u = u*[m/s]
         float rho(const float si_rho) const { return si_rho*cb(m)/kg; } // density si_rho = rho*[kg/m^3]
-        float rho_dot(const float si_rho) const { return si_rho*cb(m)*s/kg; } // density si_rho_dot = rho_dot*[kg/m^3/s]
+        float rho_u(const float si_rho_u) const { return si_rho_u* cb(m)/kg * s/m; } // mass flux si_rho_u = rho_u
+        float rho_dot(const float si_rho) const { return si_rho*cb(m)*s/kg; } // density si_rho_dot = rho*[kg/m^3/s]
         float Q(const float si_Q) const { return si_Q*s/cb(m); } // flow rate si_Q = Q*[m^3/s]
         float nu(const float si_nu) const { return si_nu*s/sq(m); } // kinematic shear viscosity si_nu = nu*[m^2/s]
         float mu(const float si_mu) const { return si_mu*s*m/kg; } // dynamic shear viscosity si_mu = mu*[kg/(m*s)]
@@ -50,9 +54,10 @@
         float R(const float si_R) const{ return si_R*s*s*K / (m*m);}  
         float p(const float si_p) const { return si_p*(m*sq(s))/kg; } // pressure 
         float bin_diff(const float si_bin_diff) const { return si_bin_diff * s / (m*m); } // pressure 
+        float diff_coeff(const float si_dif_coeff) const { return si_dif_coeff*s/sq(m); } // diffusion coefficient si_nu = nu*[m^2/s]
         
         // the following methods convert simulation units into SI units (have to be called after set_m_kg_s(...);)
-        float si_x(const unsigned int x) const { return (float)x*m; } // length si_x = x*[m]
+        float si_x(const int x) const { return (float)x*m; } // length si_x = x*[m]
         float si_x(const float x) const { return x*m; } // length si_x = x*[m]
         float si_M(const float M) const { return M*kg; } // mass si_M = M*[kg]
         float si_t(const unsigned long t) const { return (float)t*s; } // time si_t = t*[s]

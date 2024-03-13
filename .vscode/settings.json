@@ -73,6 +73,15 @@
         "core": "cpp",
         "superlusupport": "cpp",
         "fft": "cpp",
-        "specialfunctions": "cpp"
+        "specialfunctions": "cpp",
+        "eigen": "cpp",
+        "sparse": "cpp",
+        "compare": "cpp",
+        "concepts": "cpp",
+        "numbers": "cpp",
+        "semaphore": "cpp",
+        "stop_token": "cpp",
+        "*.ipp": "cpp",
+        "orderingmethods": "cpp"
     }
 }
