@@ -19,8 +19,8 @@
     // #define SOD_SHOCK_1D
     // #define SOD_SHOCK
     // #define SOD_SHOCK_SIUNIT
-    #define TERNARY_DIFFUSION
-    // #define SHEAR_LAYER_MULTICOMP
+    // #define TERNARY_DIFFUSION
+    #define SHEAR_LAYER_MULTICOMP
     // #define PERFECTLY_STIRRED_REACTOR_3D
     // #define CONDUCTION_1D
     // #define COUETTE_FLOW
