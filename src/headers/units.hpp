@@ -17,6 +17,8 @@
 
             std::cout << "dt* : " << s << std::endl;
             std::cout << "dx* : " << m << std::endl;
+            std::cout << "dT* : " << K << std::endl;
+            std::cout << "dkg* : " << kg << std::endl;
             std::cout << "speed limit : " << (double) m / s << std::endl;
 
         }
@@ -25,6 +27,17 @@
             this->kg = kg;
             this->s = s;
             this->K = K;
+        }
+        void set_m_kg_s(const float m, const float s) { // do unit conversion manually
+            this->m = m;
+            this->kg = 1.0/1.0*cb((double)m);
+            this->s = s;
+            this->K = 12000.0;
+
+            std::cout << "dt* : " << s << std::endl;
+            std::cout << "dx* : " << m << std::endl;
+            std::cout << "dT* : " << K << std::endl;
+            std::cout << "dkg* : " << kg << std::endl;
         }
 
         // the following methods convert SI units into simulation units (have to be called after set_m_kg_s(...);)
