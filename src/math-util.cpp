@@ -84,3 +84,36 @@ float smootherstep(float x, float edge0 = 0.0f, float edge1 = 1.0f)
 double smooth(double left, double right, double x, double center, double alpha) {
     return left +  0.5 * (1 + std::tanh(alpha * (x - center))) * (right-left);
 }
+
+// calculate ratio of consecutive slopes (theta)
+double calc_ratio_slopes(double stc_n, double stc_c, double stc_p)
+{
+    if (stc_p == stc_c)
+        return 0;
+    else
+        return (stc_c - stc_n)/(stc_p - stc_c);
+}
+
+double limiterMinmod(double theta)
+{
+    return std::max(0.0, std::min(1.0, theta));
+}
+
+double limiterVanleer(double theta)
+{
+    return (theta + abs(theta)) / (1 + abs(theta)); 
+}
+
+double FD_limiterMinmod(double stc_n, double stc_c, double stc_p, double dx)
+{
+    double theta = calc_ratio_slopes(stc_n, stc_c, stc_p);
+    double phi = limiterMinmod(theta);
+    return phi * (stc_p - stc_c) / dx;
+}
+
+double FD_limiterVanleer(double stc_n, double stc_c, double stc_p, double dx)
+{
+    double theta = calc_ratio_slopes(stc_n, stc_c, stc_p);
+    double phi = limiterVanleer(theta);
+    return -1.0 * phi * (stc_p - stc_c) / dx;
+}

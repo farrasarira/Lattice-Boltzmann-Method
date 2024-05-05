@@ -15,4 +15,10 @@
     float smootherstep(float, float, float);
     double smooth(double left, double right, double x, double center, double alpha);
 
+    double calc_ratio_slopes(double stc_n, double stc_c, double stc_p);
+    double limiterMinmod(double theta);
+    double limiterVanleer(double theta);
+    double FD_limiterMinmod(double stc_n, double stc_c, double stc_p, double dx);
+    double FD_limiterVanleer(double stc_n, double stc_c, double stc_p, double dx);
+
 #endif

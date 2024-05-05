@@ -12,20 +12,23 @@
     // Choose one of the following Flow Cases
     // #define CYLINDER_2D
     // #define TAYLOR_GREEN_2D
-    // #define TAsYLOR_GREEN_3D
+    // #define TAYLOR_GREEN_3D
     // #define CHANNEL_FLOW_3D
     // #define CYLINDER_3D
     // #define VISCOSITY_TEST
+    // #define CONDUCTIVITY_TEST
+    // #define SOUNDSPEED_TEST
     // #define SOD_SHOCK_1D
     // #define SOD_SHOCK
     // #define SOD_SHOCK_SIUNIT
     // #define TERNARY_DIFFUSION
-    #define SHEAR_LAYER_MULTICOMP
+    // #define SHEAR_LAYER_MULTICOMP
     // #define PERFECTLY_STIRRED_REACTOR_3D
     // #define CONDUCTION_1D
     // #define COUETTE_FLOW
     // #define COUETTE_FLOW_MULTICOMP
-    // #define TAYLOR_GREEN_3D_MULTICOMP
+    #define TAYLOR_GREEN_3D_MULTICOMP
+    // #define SHEAR_LAYER
 
     
     // ####### USE FD for species conservation #######
@@ -35,10 +38,10 @@
     // ########## Parallel Computation ###############
     // Uncomment 2 lines of code below to utilize parallel computation using OpenMP
     #define PARALLEL
-    #define NUM_THREADS 7
+    #define NUM_THREADS 12
 
     // ############### OUTPUT UNIT ###################
-    #define OUTPUT_SI               // uncomment for SI UNIT, comment for LATTICE UNIT
+    // #define OUTPUT_SI               // uncomment for SI UNIT, comment for LATTICE UNIT
 
     // ############### Limiter Type ##################
     #define LIMITER_TYPE limiterVanleer
@@ -64,7 +67,7 @@
     #elif defined TAYLOR_GREEN_2D 
         #define D2Q9
         #define NDIM 2
-    #elif defined TAYLOR_GREEN_3D || defined CHANNEL_FLOW_3D || defined CYLINDER_3D || defined VISCOSITY_TEST || defined SOD_SHOCK || defined TERNARY_DIFFUSION || defined SOD_SHOCK_SIUNIT || defined SHEAR_LAYER_MULTICOMP || defined PERFECTLY_STIRRED_REACTOR_3D || defined CYLINDER_2D || defined CONDUCTION_1D || defined BPVT_1 || defined COUETTE_FLOW || defined COUETTE_FLOW_MULTICOMP || defined TAYLOR_GREEN_3D_MULTICOMP
+    #elif defined TAYLOR_GREEN_3D || defined CHANNEL_FLOW_3D || defined CYLINDER_3D || defined VISCOSITY_TEST || defined CONDUCTIVITY_TEST || defined SOUNDSPEED_TEST || defined SOD_SHOCK || defined TERNARY_DIFFUSION || defined SOD_SHOCK_SIUNIT || defined SHEAR_LAYER_MULTICOMP || defined PERFECTLY_STIRRED_REACTOR_3D || defined CYLINDER_2D || defined CONDUCTION_1D || defined BPVT_1 || defined COUETTE_FLOW || defined COUETTE_FLOW_MULTICOMP || defined TAYLOR_GREEN_3D_MULTICOMP || defined SHEAR_LAYER
         #define D3Q27
         #define NDIM 3
     #endif
