@@ -16,7 +16,7 @@ void LBM::Init()
         {
             for(int k = 0; k < Nz; ++k)
             {    
-                if (mixture[i][j][k].type == TYPE_F || mixture[i][j][k].type == TYPE_E)     
+                if (mixture[i][j][k].type == TYPE_F || mixture[i][j][k].type == TYPE_I || mixture[i][j][k].type == TYPE_O)     
                 {            
                     double velocity[3] = {  mixture[i][j][k].u,
                                             mixture[i][j][k].v, 
@@ -70,7 +70,7 @@ void LBM::Init()
         {
             for(int k = 0; k < Nz; ++k)
             {    
-                if (mixture[i][j][k].type == TYPE_F || mixture[i][j][k].type == TYPE_E)     
+                if (mixture[i][j][k].type == TYPE_F || mixture[i][j][k].type == TYPE_I || mixture[i][j][k].type == TYPE_O)     
                 {            
                     // initiate Cantera object
                     int rank = omp_get_thread_num();

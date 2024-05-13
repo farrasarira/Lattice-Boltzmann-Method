@@ -84,11 +84,10 @@ void main_setup() // 2D Flow over cylinder -------------------------------------
 void main_setup() // 3D Taylor-Green Vortex
 {
     double RE = 200;
-    LBM lb(100, 100, 100, 0.00297753);
-    // LBM lb(100, 100, 100, 0.025);
+    // LBM lb(100, 100, 100, 0.00297753);
+    LBM lb(150, 150, 150, 0.035);
 
-
-    const double gasconst = 0.033059;
+    const double gasconst = 1.0;
     const double gamma = 1.4;
     const double rho0 = 1.0;
     const double p0 = 0.1;
@@ -129,13 +128,13 @@ void main_setup() // 3D Taylor-Green Vortex
                     lb.mixture[i][j][k].v = -u_max * cos(2.0*M_PI/a*(double)i) * sin(2.0*M_PI/b*(double)j) * cos(2.0*M_PI/c*(double)k);
                     lb.mixture[i][j][k].w = 0.0;
                     lb.mixture[i][j][k].p = p0 + rho0*u_max*u_max/16.0 * (cos(4.0*M_PI/a*(double)i) + cos(4.0*M_PI/b*(double)j)) * (cos(4.0*M_PI/c*(double)k) + 2.0);
-                    lb.mixture[i][j][k].temp = temp0; 
+                    lb.mixture[i][j][k].temp = temp0;
                 }
             }
         }
     }
     
-    lb.run(10000000,100);
+    lb.run(10000000,10);
 }
 #elif defined TAYLOR_GREEN_2D
 void main_setup() // 2D Taylor-Green Vortex
@@ -693,7 +692,7 @@ void main_setup() // Ternary Gas Diffusion -------------------------------------
     double si_rho = 1.225;  // [kg/m^3]
     double si_temp = 300.0; // [K]
 
-    units.set_m_kg_s(NX, VEL0, RHO0, 0.1, si_len, si_u_max, si_rho, si_temp); // setting the conversion factor 
+    units.set_m_kg_s(NX, VEL0, RHO0, 0.025, si_len, si_u_max, si_rho, si_temp); // setting the conversion factor 
 
     std::vector<std::string> species = { "H2", "Ar" , "CH4"};
     // std::vector<std::string> species = { "AR" , "N2"};
@@ -961,22 +960,38 @@ void main_setup() // 1D Heat conduction test case ------------------------------
 
 void main_setup() // 2D Couette Flow --------------------------------------------------------
 {
-    int NX = 2; 
-    int NY = 100; 
+    int NX = 1; 
+    int NY = 99; 
     int NZ = 1;
     
-    double si_len = 1E-3;    // [m]
-    double si_u_max = 1.0E+2;  // [m/s]
-    double si_rho = 1.225;  // [kg/m^3]
-    double si_temp = 300.0;// [K]
-    double nu = 0.025;
+    const double Ec = 40.0;
+    const double prandtl = 0.666725;
+    const double gasconst = 2.49746;
+    const double gamma = 1.66667;
+    const double Ma = 0.2;
+    const double Re = 447.898;
+    const double temp_c = 0.025;
 
-    units.set_m_kg_s(NX, VEL0, RHO0, TEMP0, si_len, si_u_max, si_rho, si_temp); // setting the conversion factor 
-
+    const double U = Ma*sqrt(gamma*gasconst*temp_c);
+    const double nu = U*NY/Re;
+    const double temp_h = temp_c + U*U / (gamma*gasconst/(gamma-1.0)*Ec);
     
     LBM lb(NX, NY, NZ, nu);
+    lb.set_prtl(prandtl);
+    lb.set_gasconst(gasconst);
+    lb.set_gamma(gamma);
 
     int Nx = lb.get_Nx(); int Ny = lb.get_Ny(); int Nz = lb.get_Nz();
+
+    std::cout << "Ec number : " << Ec << std::endl;
+    std::cout << "prandtl number : " << prandtl << std::endl;
+    std::cout << "Re number : " << Re << std::endl;
+    std::cout << "nu : " << nu << std::endl;
+    std::cout << "sound speed : " << lb.get_soundspeed(temp_c) << std::endl;
+    std::cout << "hot temperature : " << temp_h << std::endl;
+    std::cout << "U (lattice unit) : " << U << std::endl;
+    std::cout << "gamma : " << gamma << std::endl;
+    std::cout << "gas const : " << gasconst << std::endl;
 
 
     #pragma omp parallel for
@@ -985,61 +1000,83 @@ void main_setup() // 2D Couette Flow -------------------------------------------
         for(int j = 0; j < Ny; ++j)
         {
             for(int k = 0; k < Nz; ++k)
-            {
+            {                
                 if ( i==0 || i==Nx-1 || k==0 || k==Nz-1) // set periodic boundary condition
                 {
                     lb.mixture[i][j][k].type = TYPE_P;
                 }
-                
+
                 if (j==0 )
                 {
                     lb.mixture[i][j][k].type = TYPE_S;
                     lb.mixture[i][j][k].u = 0.0;
-                    lb.mixture[i][j][k].temp = 0.1;
+                    lb.mixture[i][j][k].temp = temp_c;
                 }
                 if (j==Ny-1 )
                 {
                     lb.mixture[i][j][k].type = TYPE_S;
-                    lb.mixture[i][j][k].u = 0.05;
-                    lb.mixture[i][j][k].temp = 0.1003125;
+                    lb.mixture[i][j][k].u = U;
+                    lb.mixture[i][j][k].temp = temp_h;
                 }
 
                 if (lb.mixture[i][j][k].type == TYPE_F)
                 {
-                    lb.mixture[i][j][k].temp = 0.1;
-                    lb.mixture[i][j][k].p = 1.0;
                     lb.mixture[i][j][k].u = 0.0;
+                    lb.mixture[i][j][k].temp = temp_c;
+                    lb.mixture[i][j][k].p = gasconst*temp_c;
                 }
             }
         }
     }
 
-    lb.set_prtl(0.25);
-    lb.set_gasconst(0.4/1.4);
-    lb.run(200000,10000);
+    lb.run(300000,1000);
+    for (int j = 0; j < Ny; ++j){
+        std::cout << lb.mixture[1][j][1].temp << std::endl; 
+    }
 }
 
 #elif defined COUETTE_FLOW_MULTICOMP
 void main_setup() // 2D Couette flow (multicomponent)  --------------------------------------------------------
-{
-    int NX = 2; 
-    int NY = 50; 
-    int NZ = 5;
+{  
+    int NX = 1; 
+    int NY = 49; 
+    int NZ = 1;
     
-    double si_len = 1E-6;    // [m]
-    double si_u_max = 1.0E+3;  // [m/s]
-    double si_rho = 0.5;  // [kg/m^3]
-    double si_temp = 300.0;// [K]
-    
+    const double Ec = 40.0;
+    const double Ma = 0.2;
+    // const double Re = 100;
 
-    units.set_m_kg_s(NX, VEL0, RHO0, TEMP0, si_len, si_u_max, si_rho, si_temp); // setting the conversion factor 
+    const double temp0 = 300.0;
+    const double p0 = 101325.0;
 
     std::vector<std::string> species = { "AR" };
     
     LBM lb(NX, NY, NZ, species);
+    int Nx = lb.get_Nx(); int Ny = lb.get_Ny(); int Nz = lb.get_Nz();
+    size_t nSpecies = lb.get_nSpecies();
 
-    int Nx = lb.get_Nx(); int Ny = lb.get_Ny(); int Nz = lb.get_Nz(); int nSpecies = lb.get_nSpecies();
+    auto sol = Cantera::newSolution("gri30.yaml", "gri30");
+    auto gas = sol->thermo();   
+    std::vector <double> X (gas->nSpecies());
+    X[gas->speciesIndex("AR")] = 1.0;
+    gas->setMoleFractions(&X[0]);
+    gas->setState_TP(temp0, p0);
+    auto trans = sol->transport();
+    const double NU = trans->viscosity() / gas->density();
+    const double U = Ma*gas->soundSpeed();
+    const double temp_h = temp0 + U*U / (gas->cp_mass()*Ec);
 
+    units.set_m_kg_s(NY, 1.0, 1.0, 0.025, 1E-3, 1.0, 1.0, 300.0); // setting the conversion factor 
+
+    std::cout << "Ec number : " << Ec << std::endl;
+    std::cout << "prandtl number : " << trans->viscosity()*gas->cp_mass()/trans->thermalConductivity() << std::endl;
+    std::cout << "Re number : " << U * units.si_x(NY) / NU << std::endl;
+    std::cout << "nu : " << units.nu(NU) << std::endl;
+    std::cout << "sound speed : " << units.u(gas->soundSpeed()) << std::endl;
+    std::cout << "hot temperature : " << units.temp(temp_h) << std::endl;
+    std::cout << "U (lattice unit) : " << units.u(U) << std::endl;
+    std::cout << "gamma : " << gas->cp_mass()/gas->cv_mass() << std::endl;
+    std::cout << "gas const : " << units.R(gas->cp_mass() - gas->cv_mass()) << std::endl;
 
     #pragma omp parallel for
     for(int i = 0; i < Nx ; ++i)
@@ -1047,50 +1084,56 @@ void main_setup() // 2D Couette flow (multicomponent)  -------------------------
         for(int j = 0; j < Ny; ++j)
         {
             for(int k = 0; k < Nz; ++k)
-            {
+            {                
                 if ( i==0 || i==Nx-1 || k==0 || k==Nz-1) // set periodic boundary condition
                 {
                     lb.mixture[i][j][k].type = TYPE_P;
                 }
-                
+
                 if (j==0 )
                 {
                     lb.mixture[i][j][k].type = TYPE_S;
                     lb.mixture[i][j][k].u = 0.0;
-                    lb.mixture[i][j][k].temp = units.si_temp(300);
+                    lb.mixture[i][j][k].temp = units.temp(temp0);
                 }
                 if (j==Ny-1 )
                 {
                     lb.mixture[i][j][k].type = TYPE_S;
-                    lb.mixture[i][j][k].u = units.u(10);
-                    lb.mixture[i][j][k].temp = units.temp(350);
+                    lb.mixture[i][j][k].u = units.u(U);
+                    lb.mixture[i][j][k].temp = units.temp(temp_h);
                 }
 
                 if (lb.mixture[i][j][k].type == TYPE_F)
                 {
-                    lb.mixture[i][j][k].temp = units.temp(300);
-                    lb.mixture[i][j][k].p = units.p(Cantera::OneAtm);
-                    
-                    for(int a=0; a < nSpecies; ++a)
+                    for(size_t a = 0; a < nSpecies; ++a)
                         lb.species[a][i][j][k].X = 1.0;
+
+                    lb.mixture[i][j][k].u = 0.0;
+                    lb.mixture[i][j][k].temp = units.temp(temp0);
+                    lb.mixture[i][j][k].p = units.p(p0);
                 }
             }
         }
     }
-    lb.run(20000,1000);
+
+    lb.run(150000,1000);
+    for (int j = 0; j < Ny; ++j){
+        std::cout << lb.mixture[1][j][1].temp << std::endl; 
+    }
 }
 
 #elif defined TAYLOR_GREEN_3D_MULTICOMP
 void main_setup() // 3D Taylor-Green Vortex (multicomponent) ------------------------------------------------------------------------------------
 {
     double RE = 200;
-    int NX = 150; 
-    int NY = 150; 
-    int NZ = 150;
+    int NX = 100; 
+    int NY = 100; 
+    int NZ = 100;
     
-    units.set_m_kg_s(1e-7, 1e-11);
+    units.set_m_kg_s(6e-7, 1e-9);
 
     std::vector<std::string> species = { "CO2" , "AR" };
+    // std::vector<std::string> species = { "AR" };
     double pressure = Cantera::OneAtm;
     double temp = 300.0;
 
@@ -1108,8 +1151,7 @@ void main_setup() // 3D Taylor-Green Vortex (multicomponent) -------------------
     auto gas = sol->thermo();   
     std::vector <double> X (gas->nSpecies());
     X[gas->speciesIndex("CO2")] = 1.0;
-    X[gas->speciesIndex("AR")] = 2.0;
-    // X[gas->speciesIndex("H2")] = 1.0;
+    X[gas->speciesIndex("AR")] = 1.0;
     gas->setMoleFractions(&X[0]);
     gas->setState_TP(temp, pressure);
     auto trans = sol->transport();
@@ -1118,6 +1160,16 @@ void main_setup() // 3D Taylor-Green Vortex (multicomponent) -------------------
 
     double u_max = RE * NU / (NX/(2.*M_PI));
     std::cout << "umax : " << u_max << std::endl; 
+
+    double spd_sound = units.u(gas->soundSpeed());
+    std::cout << "Mach : " << u_max/spd_sound << std::endl;
+
+    double gas_const = units.cp(Cantera::GasConstant/gas->meanMolecularWeight());
+    std::cout << "gas const : " << gas_const << std::endl;
+
+    const double rho0 = units.rho(gas->density());
+    const double p0 = units.p(gas->pressure());
+    const double temp0 = units.temp(gas->temperature()); 
     
 
     
@@ -1135,19 +1187,19 @@ void main_setup() // 3D Taylor-Green Vortex (multicomponent) -------------------
                 if (lb.mixture[i][j][k].type == TYPE_F)
                 {
                     for(int spec_idx = 0; spec_idx < nSpecies; ++spec_idx)
-                        lb.species[spec_idx][i][j][k].X = 1.0 + spec_idx;
+                        lb.species[spec_idx][i][j][k].X = 1.0;
+
                     lb.mixture[i][j][k].u =  u_max * sin(2.0*M_PI/a*(double)i) * cos(2.0*M_PI/b*(double)j) * cos(2.0*M_PI/c*(double)k);
                     lb.mixture[i][j][k].v = -u_max * cos(2.0*M_PI/a*(double)i) * sin(2.0*M_PI/b*(double)j) * cos(2.0*M_PI/c*(double)k);
                     lb.mixture[i][j][k].w = 0.0;
-                    // lb.mixture[i][j][k].rho = units.rho(gas->density()) - u_max*u_max * 3.0/16.0 * (cos(4.0*M_PI/a*(double)i) + cos(4.0*M_PI/b*(double)j)) * (cos(4.0*M_PI/c*(double)k) + 2);
-                    lb.mixture[i][j][k].temp = units.temp(temp);
-                    lb.mixture[i][j][k].p = units.p(pressure);
+                    lb.mixture[i][j][k].p = p0 + rho0*u_max*u_max/16.0 * (cos(4.0*M_PI/a*(double)i) + cos(4.0*M_PI/b*(double)j)) * (cos(4.0*M_PI/c*(double)k) + 2.0);
+                    lb.mixture[i][j][k].temp = temp0; 
                 }
             }
         }
     }
     
-    lb.run(100,10);
+    lb.run(1000000,10);
 }
 
 #elif defined SHEAR_LAYER
@@ -1204,6 +1256,147 @@ void main_setup() // 3D Shear layer
     }
 
     lb.run(100000,100);
+}
+
+
+#elif defined SHOCK_VORTEX_INTERAC
+void main_setup() // 3D Taylor-Green Vortex
+{
+    const int NX = 1680;
+    const int NY = 1440;
+    const int NZ = 1;
+
+    const double gamma = 1.4;
+    const double gas_const = 1.0;
+    const double prantdl = 0.75;
+    const double Re = 800;
+
+    const double Ma_v = 0.25;
+    const double r_v = NX/28;
+    const double x_v = 6*r_v;
+    const double y_v = NY/2;
+
+    const double Ma_s = 1.2;
+    const double x_s = 8.0*r_v;
+
+    const double rho_l = 1.0;
+    const double temp_l = 0.05;
+    const double ux_l = Ma_s*sqrt(gamma*temp_l);
+    const double uy = 0.0;
+
+    const double rho_r = (gamma+1.0)*pow(Ma_s,2.0) / ((gamma-1.0)*pow(Ma_s,2.0)+2.0) * rho_l;
+    const double temp_r = (1.0+(gamma-1.0)/2.0*pow(Ma_s,2.0)) * (2.0*gamma/(gamma-1.0)*pow(Ma_s,2.0)-1.0) / (pow(Ma_s,2.0)*((2.0*gamma)/(gamma-1.0)+(gamma-1.0)/2.0)) * temp_l;
+    const double Ma_s_r = ((gamma-1.0)*pow(Ma_s,2.0) + 2.0) / (2.0*gamma*pow(Ma_s,2.0)-(gamma-1.0));
+    
+    const double nu = sqrt(gamma*temp_l) * r_v / Re;
+
+    LBM lb(NX, NY, NZ, nu);
+    lb.set_gamma(gamma);
+    lb.set_gasconst(gas_const);
+    lb.set_prtl(prantdl);
+    int Nx = lb.get_Nx(); int Ny = lb.get_Ny(); int Nz = lb.get_Nz();
+   
+    std::cout << "umax : " << ux_l << std::endl;
+
+    #pragma omp parallel for
+    for(int i = 0; i < Nx ; ++i)
+    {
+        for(int j = 0; j < Ny; ++j)
+        {
+            for(int k = 0; k < Nz; ++k)
+            {
+                if (i==0 || i==Nx-1 ||  j==0 || j==Ny-1 || k==0 || k==Nz-1) // set periodic boundary condition
+                {
+                    lb.mixture[i][j][k].type = TYPE_P;
+                }
+                if (lb.mixture[i][j][k].type == TYPE_F)
+                {
+                    lb.mixture[i][j][k].u =  u_max * sin(2.0*M_PI/a*(double)i) * cos(2.0*M_PI/b*(double)j) * cos(2.0*M_PI/c*(double)k);
+                    lb.mixture[i][j][k].v = -u_max * cos(2.0*M_PI/a*(double)i) * sin(2.0*M_PI/b*(double)j) * cos(2.0*M_PI/c*(double)k);
+                    lb.mixture[i][j][k].w = 0.0;
+                    lb.mixture[i][j][k].p = p0 + rho0*u_max*u_max/16.0 * (cos(4.0*M_PI/a*(double)i) + cos(4.0*M_PI/b*(double)j)) * (cos(4.0*M_PI/c*(double)k) + 2.0);
+                    lb.mixture[i][j][k].temp = temp0;
+                }
+            }
+        }
+    }
+    
+    lb.run(10000000,10);
+}
+
+#elif defined RB_INSTABILITY
+void main_setup() // 2D Couette Flow --------------------------------------------------------
+{
+    int NX = 400; 
+    int NY = 200; 
+    int NZ = 1;
+    
+    const double Ra = 2.0E+4;
+    const double prandtl = 0.7;
+    const double gasconst = 1.0;
+    const double gamma = 1.4;
+    const double nu = 0.025;
+
+    const double rho0 = 1.0;
+    const double Temp_h = 0.2;
+    const double Temp_c = 0.1;   
+    const double delta_Temp = Temp_h-Temp_c;
+    
+    LBM lb(NX, NY, NZ, nu);
+    lb.set_prtl(prandtl);
+    lb.set_gasconst(gasconst);
+    lb.set_gamma(gamma);
+    lb.set_Ra(Ra);
+    
+    const double G_lambda = Ra*(nu*nu/prandtl) / (delta_Temp*NY*NY*NY);
+
+    int Nx = lb.get_Nx(); int Ny = lb.get_Ny(); int Nz = lb.get_Nz();
+
+    std::cout << "Ra number : " << Ra << std::endl;
+    std::cout << "prandtl number : " << prandtl << std::endl;
+    std::cout << "nu : " << nu << std::endl;
+    std::cout << "sound speed : " << lb.get_soundspeed(Temp_c) << std::endl;
+    std::cout << "gamma : " << gamma << std::endl;
+    std::cout << "gas const : " << gasconst << std::endl;
+
+
+    #pragma omp parallel for
+    for(int i = 0; i < Nx ; ++i)
+    {
+        for(int j = 0; j < Ny; ++j)
+        {
+            for(int k = 0; k < Nz; ++k)
+            {                
+                if ( i==0 || i==Nx-1 || k==0 || k==Nz-1) // set periodic boundary condition
+                {
+                    lb.mixture[i][j][k].type = TYPE_P;
+                }
+
+                if (j==0 )
+                {
+                    lb.mixture[i][j][k].type = TYPE_S;
+                    lb.mixture[i][j][k].u = 0.0;
+                    lb.mixture[i][j][k].temp = Temp_h;
+                }
+                if (j==Ny-1 )
+                {
+                    lb.mixture[i][j][k].type = TYPE_S;
+                    lb.mixture[i][j][k].u = 0.0;
+                    lb.mixture[i][j][k].temp = Temp_c;
+                }
+
+                if (lb.mixture[i][j][k].type == TYPE_F)
+                {
+                    lb.mixture[i][j][k].u = 0.0;
+                    lb.mixture[i][j][k].temp = Temp_h - delta_Temp*j/Ny;
+                    lb.mixture[i][j][k].rho = (1.0 + rho0*G_lambda*delta_Temp*j/2.0*(1.0-j/Ny))*(1.0+0.001*cos(2.0*M_PI*i/Nx));
+                    lb.mixture[i][j][k].p = lb.mixture[i][j][k].rho*gasconst*lb.mixture[i][j][k].temp;
+                }
+            }
+        }
+    }
+
+    lb.run(300000,1000);
 }
 
 #endif

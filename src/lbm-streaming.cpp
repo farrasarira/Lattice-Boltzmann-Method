@@ -21,8 +21,7 @@ void LBM::Streaming()
                         k_nb = k - cz[l];
 
                         //---- Solid Boundary Condition ----------------------
-                        if(mixture[i_nb][j_nb][k_nb].type==TYPE_S)
-                        {
+                        if(mixture[i_nb][j_nb][k_nb].type==TYPE_S){
                             #ifndef MULTICOMP
                             mixture[i][j][k].f[l] = mixture[i][j][k].fpc[opposite[l]];
                             #else
@@ -30,9 +29,22 @@ void LBM::Streaming()
                                     species[a][i][j][k].f[l] = species[a][i][j][k].fpc[opposite[l]];
                             #endif
                         }
+                        //---- Adiabatic Free-Slip Wall --------------------------
+                        else if (mixture[i_nb][j_nb][k_nb].type==TYPE_FS){
+                            int lp, ip, jp, kp;
+                            dirSlip(l, i, j, k, lp, ip, jp, kp);
+                            // std::cout << i << " | " << j << " | " << k << " | " << ip << " | " << jp << " | " << kp <<  std::endl;
+
+                            #ifndef MULTICOMP
+                            mixture[i][j][k].f[l] = mixture[ip][jp][kp].fpc[lp];
+                            #else
+                                for(size_t a = 0; a < nSpecies; ++a)
+                                    species[a][i][j][k].f[l] = species[a][ip][jp][kp].fpc[lp];
+                            #endif
+                            mixture[i][j][k].g[l] = mixture[ip][jp][kp].gpc[lp];
+                        }
                         //---- Adiabatic Wall --------------------------
-                        else if (mixture[i_nb][j_nb][k_nb].type==TYPE_A)
-                        {
+                        else if (mixture[i_nb][j_nb][k_nb].type==TYPE_A){
                             #ifndef MULTICOMP
                             mixture[i][j][k].f[l] = mixture[i][j][k].fpc[opposite[l]];
                             #else
@@ -42,9 +54,13 @@ void LBM::Streaming()
                             mixture[i][j][k].g[l] = mixture[i][j][k].gpc[opposite[l]];
                         }
                         //---- Inlet/Outlet Boundary Condition ---------------
-                        else if (mixture[i_nb][j_nb][k_nb].type==TYPE_E)
-                        {
-                            // mixture[i][j][k].f[l] = mixture[i_nb][j_nb][k_nb].fpc[l];
+                        else if (mixture[i_nb][j_nb][k_nb].type==TYPE_O){
+                            #ifndef MULTICOMP
+                            mixture[i][j][k].f[l] = mixture[i_nb][j_nb][k_nb].fpc[l];
+                            #else
+                                for(size_t a = 0; a < nSpecies; ++a)
+                                    species[a][i][j][k].f[l] = species[a][i_nb][j_nb][k_nb].fpc[l];
+                            #endif
                             mixture[i][j][k].g[l] = mixture[i_nb][j_nb][k_nb].gpc[l];
                         }
                         else //---- Periodic Boundary Condition --------------------
@@ -78,4 +94,6 @@ void LBM::Streaming()
             }
         }
     }
+    
 }
+

@@ -15,11 +15,12 @@
             s = m * u/si_u;                 // velocity si_u = u*[m/s]
             K = si_temp/temp;               // temperature
 
+            std::cout << "=== UNIT CONVERSION ===" << std::endl;
             std::cout << "dt* : " << s << std::endl;
             std::cout << "dx* : " << m << std::endl;
             std::cout << "dT* : " << K << std::endl;
             std::cout << "dkg* : " << kg << std::endl;
-            std::cout << "speed limit : " << (double) m / s << std::endl;
+            std::cout << "=======================" << std::endl;
 
         }
         void set_m_kg_s(const float m, const float kg, const float s, const float K) { // do unit conversion manually
@@ -33,11 +34,13 @@
             this->kg = 1.0/1.0*cb((double)m);
             this->s = s;
             this->K = 12000.0;
-
+            
+            std::cout << "=== UNIT CONVERSION ===" << std::endl;
             std::cout << "dt* : " << s << std::endl;
             std::cout << "dx* : " << m << std::endl;
             std::cout << "dT* : " << K << std::endl;
             std::cout << "dkg* : " << kg << std::endl;
+            std::cout << "=======================" << std::endl;
         }
 
         // the following methods convert SI units into simulation units (have to be called after set_m_kg_s(...);)

@@ -5,6 +5,7 @@
     double sq(double a);
     double cb(double a);
     double v_sqr(double u, double v, double w);
+    double v_mag(double u, double v, double w);
 
     double limiterVanleer(double sL, double sR);
     double limiterMinmod(double sL, double sR);

@@ -170,75 +170,75 @@ void LBM::calculate_moment()
                     mixture[i][j][k].p = units.p(gas->pressure()); 
                     // gas_const = units.cp(Cantera::GasConstant/gas->meanMolecularWeight());
 
-                    // -------------------------------------------------------------------------------------------------------------------------------
-                    int ld = gas->nSpecies();
-                    std::vector<double> d(ld * ld);
-                    trans->getBinaryDiffCoeffs(ld, &d[0]);
+                    // // -------------------------------------------------------------------------------------------------------------------------------
+                    // int ld = gas->nSpecies();
+                    // std::vector<double> d(ld * ld);
+                    // trans->getBinaryDiffCoeffs(ld, &d[0]);
 
-                    double D_ab[nSpecies][nSpecies];
-                    for(size_t a = 0; a < nSpecies; ++a)                      
-                        for(size_t b = 0; b < nSpecies; ++b)
-                            D_ab[a][b] =  units.nu( d[ld*gas->speciesIndex(speciesName[b]) + gas->speciesIndex(speciesName[a])] );
+                    // double D_ab[nSpecies][nSpecies];
+                    // for(size_t a = 0; a < nSpecies; ++a)                      
+                    //     for(size_t b = 0; b < nSpecies; ++b)
+                    //         D_ab[a][b] =  units.nu( d[ld*gas->speciesIndex(speciesName[b]) + gas->speciesIndex(speciesName[a])] );
 
-                    Eigen::SparseMatrix<double> matrix_A(nSpecies, nSpecies);
-                    Eigen::VectorXd vector_rx(nSpecies);
-                    Eigen::VectorXd vector_ry(nSpecies);
-                    Eigen::VectorXd vector_rz(nSpecies);
-                    Eigen::VectorXd vector_u(nSpecies);
-                    Eigen::VectorXd vector_v(nSpecies);
-                    Eigen::VectorXd vector_w(nSpecies); 
+                    // Eigen::SparseMatrix<double> matrix_A(nSpecies, nSpecies);
+                    // Eigen::VectorXd vector_rx(nSpecies);
+                    // Eigen::VectorXd vector_ry(nSpecies);
+                    // Eigen::VectorXd vector_rz(nSpecies);
+                    // Eigen::VectorXd vector_u(nSpecies);
+                    // Eigen::VectorXd vector_v(nSpecies);
+                    // Eigen::VectorXd vector_w(nSpecies); 
 
-                    for(size_t a = 0; a < nSpecies; ++a)
-                        for(size_t b = 0; b < nSpecies; ++b)
-                            if(b != a) matrix_A.insert(a, b) = -1.0 * dt_sim/2.0 * mixture[i][j][k].p * species[a][i][j][k].X*species[b][i][j][k].X/D_ab[a][b];
-                            else {
-                                if(species[a][i][j][k].rho == 0.0) matrix_A.insert(a, b) = 1.0;
-                                else matrix_A.insert(a, b) = species[a][i][j][k].rho;
-                            }
+                    // for(size_t a = 0; a < nSpecies; ++a)
+                    //     for(size_t b = 0; b < nSpecies; ++b)
+                    //         if(b != a) matrix_A.insert(a, b) = -1.0 * dt_sim/2.0 * mixture[i][j][k].p * species[a][i][j][k].X*species[b][i][j][k].X/D_ab[a][b];
+                    //         else {
+                    //             if(species[a][i][j][k].rho == 0.0) matrix_A.insert(a, b) = 1.0;
+                    //             else matrix_A.insert(a, b) = species[a][i][j][k].rho;
+                    //         }
 
-                    for(size_t a = 0; a < nSpecies; ++a)
-                        for(size_t b = 0; b < nSpecies; ++b)
-                            if (b != a) matrix_A.coeffRef(a, a) -= matrix_A.coeffRef(a,b);
+                    // for(size_t a = 0; a < nSpecies; ++a)
+                    //     for(size_t b = 0; b < nSpecies; ++b)
+                    //         if (b != a) matrix_A.coeffRef(a, a) -= matrix_A.coeffRef(a,b);
 
-                    for(size_t a = 0; a < nSpecies; ++a){
-                        vector_rx(a) = rhou_a[a];
-                        vector_ry(a) = rhov_a[a];
-                        vector_rz(a) = rhow_a[a];
-                    }
+                    // for(size_t a = 0; a < nSpecies; ++a){
+                    //     vector_rx(a) = rhou_a[a];
+                    //     vector_ry(a) = rhov_a[a];
+                    //     vector_rz(a) = rhow_a[a];
+                    // }
 
-                    // Eigen::SparseLU<Eigen::SparseMatrix<double> , Eigen::COLAMDOrdering<int> > solver;
-                    Eigen::SparseLU<Eigen::SparseMatrix<double> > solver;
-                    solver.analyzePattern(matrix_A);
-                    solver.factorize(matrix_A);                
-                    solver.compute(matrix_A);
+                    // // Eigen::SparseLU<Eigen::SparseMatrix<double> , Eigen::COLAMDOrdering<int> > solver;
+                    // Eigen::SparseLU<Eigen::SparseMatrix<double> > solver;
+                    // solver.analyzePattern(matrix_A);
+                    // solver.factorize(matrix_A);                
+                    // solver.compute(matrix_A);
 
-                    vector_u = solver.solve(vector_rx);
-                    vector_v = solver.solve(vector_ry);
-                    vector_w = solver.solve(vector_rz);
+                    // vector_u = solver.solve(vector_rx);
+                    // vector_v = solver.solve(vector_ry);
+                    // vector_w = solver.solve(vector_rz);
 
-                    rhou = 0.0;
-                    rhov = 0.0;
-                    rhow = 0.0;
+                    // rhou = 0.0;
+                    // rhov = 0.0;
+                    // rhow = 0.0;
 
-                    for(size_t a = 0; a < nSpecies; ++a){
-                        species[a][i][j][k].u = vector_u(a);
-                        species[a][i][j][k].v = vector_v(a);
-                        species[a][i][j][k].w = vector_w(a);
+                    // for(size_t a = 0; a < nSpecies; ++a){
+                    //     species[a][i][j][k].u = vector_u(a);
+                    //     species[a][i][j][k].v = vector_v(a);
+                    //     species[a][i][j][k].w = vector_w(a);
 
-                        rhou += species[a][i][j][k].rho*species[a][i][j][k].u;
-                        rhov += species[a][i][j][k].rho*species[a][i][j][k].v;
-                        rhow += species[a][i][j][k].rho*species[a][i][j][k].w;
-                    }
+                    //     rhou += species[a][i][j][k].rho*species[a][i][j][k].u;
+                    //     rhov += species[a][i][j][k].rho*species[a][i][j][k].v;
+                    //     rhow += species[a][i][j][k].rho*species[a][i][j][k].w;
+                    // }
 
-                    mixture[i][j][k].u = rhou / mixture[i][j][k].rho;
-                    mixture[i][j][k].v = rhov / mixture[i][j][k].rho;
-                    mixture[i][j][k].w = rhow / mixture[i][j][k].rho;
+                    // mixture[i][j][k].u = rhou / mixture[i][j][k].rho;
+                    // mixture[i][j][k].v = rhov / mixture[i][j][k].rho;
+                    // mixture[i][j][k].w = rhow / mixture[i][j][k].rho;
 
-                    for(size_t a = 0; a < nSpecies; ++a){
-                        species[a][i][j][k].Vdiff_x = species[a][i][j][k].u - mixture[i][j][k].u;
-                        species[a][i][j][k].Vdiff_y = species[a][i][j][k].v - mixture[i][j][k].v;
-                        species[a][i][j][k].Vdiff_z = species[a][i][j][k].w - mixture[i][j][k].w;
-                    }
+                    // for(size_t a = 0; a < nSpecies; ++a){
+                    //     species[a][i][j][k].Vdiff_x = species[a][i][j][k].u - mixture[i][j][k].u;
+                    //     species[a][i][j][k].Vdiff_y = species[a][i][j][k].v - mixture[i][j][k].v;
+                    //     species[a][i][j][k].Vdiff_z = species[a][i][j][k].w - mixture[i][j][k].w;
+                    // }
 
                 }
             }
@@ -246,5 +246,21 @@ void LBM::calculate_moment()
     }
 
     fill_BC();
+}
+
+
+double LBM::calculate_temp(double U, double rho, double rho_a[])
+{
+    int rank = omp_get_thread_num();
+    auto gas = sols[rank]->thermo();
+    std::vector <double> Y (gas->nSpecies());
+
+    for(size_t a = 0; a < nSpecies; ++a){
+        Y[gas->speciesIndex(speciesName[a])] = rho_a[a] / rho;
+    }
+    gas->setMassFractions(&Y[0]);
+    gas->setState_UV(units.si_energy_mass(U), 1.0/units.si_rho(rho));
+
+    return units.temp(gas->temperature());
 }
 #endif

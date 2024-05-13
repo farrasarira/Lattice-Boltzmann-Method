@@ -112,6 +112,7 @@ void LBM::run(int nstep, int tout)
         // std::cout << "  Mixture Collision Done" << std::endl;
         Streaming();        // streaming step & BC
         // std::cout << "  Streaming Done" << std::endl;
+        TMS_BC();
         calculate_moment(); // calculate moment
         // std::cout << "  Calculate Moment Done" << std::endl;
 
@@ -122,6 +123,7 @@ void LBM::run(int nstep, int tout)
         }
 
     }
+    
 }
 
 

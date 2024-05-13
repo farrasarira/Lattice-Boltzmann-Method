@@ -1,5 +1,8 @@
 #include "lbm.hpp"
 #include "math_util.hpp"
+#include <omp.h>
+#include "units.hpp"
+#include "cantera.hpp"
 
 double LBM::calculate_feq(int l, double rho, double velocity[], double theta, double corr[])
 {
@@ -94,17 +97,55 @@ double LBM::calculate_geq(int l, double rho, double U, double theta, double v[])
     return geq*rho;
 }
 
-double LBM::calculate_gstr(int l, double geq, double str_heat_flux[], double eq_heat_flux[])
+double LBM::calculate_gstr(int l, double geq, double d_str_heat_flux[])
 {
     double velocity_set[3] = {cx[l], cy[l], cz[l]};
-    double heat_flux_diff[3] = {    str_heat_flux[0] - eq_heat_flux[0],
-                                    str_heat_flux[1] - eq_heat_flux[1],
-                                    str_heat_flux[2] - eq_heat_flux[2]};
     double gstr = 0.0;
     if(v_sqr(velocity_set[0], velocity_set[1], velocity_set[2]) == 1.0)
-        gstr = geq + 0.5*dotproduct_Vec3(velocity_set, heat_flux_diff);
+        gstr = geq + 0.5*dotproduct_Vec3(velocity_set, d_str_heat_flux);
     else
         gstr = geq;
     
     return gstr;
 }
+
+void LBM::calculate_feq_geq(double f_tgt[], double g_tgt[], double rho_bb, double vel_tgt[], double temp_tgt)
+{
+    double theta = gas_const*temp_tgt;
+    double cv = gas_const / (gamma - 1.0);
+    double internal_energy = cv * temp_tgt;
+
+    double corr[3]= {0, 0, 0};
+    for (int l=0; l < npop; ++l){   
+        f_tgt[l] = calculate_feq(l, rho_bb, vel_tgt, theta, corr);
+        g_tgt[l] = calculate_geq(l, rho_bb, internal_energy, theta, vel_tgt);
+    }
+}
+
+#ifdef MULTICOMP
+void LBM::calculate_feq_geq(double fa_tgt[][npop], double g_tgt[], double rho_bb, double rhoa_bb[], double vel_tgt[], double vela_tgt[][3], double temp_tgt)
+{
+
+    int rank = omp_get_thread_num();
+    auto gas = sols[rank]->thermo();
+    std::vector <double> Y (gas->nSpecies());
+    for(size_t a = 0; a < nSpecies; ++a)
+        Y[gas->speciesIndex(speciesName[a])] = rhoa_bb[a] / rho_bb;
+    
+    gas->setMassFractions(&Y[0]);
+    gas->setState_TD(units.si_temp(temp_tgt), units.si_rho(rho_bb));
+
+    double internal_energy = units.energy_mass(gas->intEnergy_mass());
+    double theta = units.energy_mass(gas->RT()/gas->meanMolecularWeight());      
+    
+    double corr[3]= {0, 0, 0};
+    for (int l=0; l < npop; ++l){   
+        for (size_t a = 0; a < nSpecies; ++a){
+            double theta_a = units.energy_mass(gas->RT()/gas->molecularWeight(gas->speciesIndex(speciesName[a]))); 
+            fa_tgt[a][l] = calculate_feq(l, rhoa_bb[a], vela_tgt[a], theta_a, corr);
+        }
+
+        g_tgt[l] = calculate_geq(l, rho_bb, internal_energy, theta, vel_tgt);
+    }
+}
+#endif

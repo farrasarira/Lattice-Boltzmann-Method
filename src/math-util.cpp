@@ -28,6 +28,11 @@ double v_sqr(double u, double v, double w)
     return u*u+v*v+w*w;
 }
 
+double v_mag(double u, double v, double w)
+{
+    return sqrt(u*u+v*v+w*w);
+}
+
 double limiterVanleer(double sL, double sR)
 {
     double slope=(abs(sR)*sL+sR*abs(sL))/(abs(sL)+abs(sR));
