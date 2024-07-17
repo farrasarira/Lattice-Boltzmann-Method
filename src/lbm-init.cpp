@@ -84,6 +84,8 @@ void LBM::Init()
                     gas->setMoleFractions(&X[0]);
                     gas->setState_TP(units.si_temp(mixture[i][j][k].temp), units.si_p(mixture[i][j][k].p));
 
+                    
+
                     // calculate other macropscopic properties [pressure, internal energy, enthalpy, total energy]
                     mixture[i][j][k].rho = units.rho(gas->density());
                     double velocity[3] = {  mixture[i][j][k].u,

@@ -338,70 +338,36 @@ void LBM::Collide_Species()
                 if (mixture[i][j][k].type == TYPE_F)     
                 {   
                     int rank = omp_get_thread_num();
-                    auto gas = sols[rank]->thermo();               
+                    auto gas = sols[rank]->thermo();   
+                    std::vector <double> Y (gas->nSpecies());
+                    for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = (species[a][i][j][k].rho) / mixture[i][j][k].rho;
+                    gas->setState_TD(units.si_temp(mixture[i][j][k].temp), units.si_rho(mixture[i][j][k].rho));
+                    gas->setMassFractions(&Y[0]);      
+
+                    double velocity_mix[3] = {  mixture[i][j][k].u,
+                                                mixture[i][j][k].v, 
+                                                mixture[i][j][k].w};      
+                    double internalEnergy = mixture[i][j][k].rhoe / mixture[i][j][k].rho - 0.5 * v_sqr(velocity_mix[0], velocity_mix[1], velocity_mix[2]);
                                         
                     // Reaction ---------------------------------------------------------------------------------------------------------------------------
-                    std::vector <double> Y (gas->nSpecies());
                     std::vector <double> w_dot(gas->nSpecies());    // mole density rate [kmol/m3/s]
                     auto kinetics = sols[rank]->kinetics();
 
                     size_t p = 0;
-                    double maxIter = 2.0;
-                    double R_a[gas->nSpecies()] = {0.0};
+                    double maxIter = 1.0;
                     double rho_a[gas->nSpecies()] = {0.0};
                     do{
                         kinetics->getNetProductionRates(&w_dot[0]); 
-                        for (int a = 0; a < (int) gas->nSpecies(); ++a){                            
-                            if (w_dot[a] == 0.0)  // Check rate == 0, no reaction take place
-                                continue;
-
-                            #pragma omp critical
-                            { 
-                                bool new_species = true;
-                                for (size_t b = 0; b < nSpecies; ++b){
-                                    if(gas->speciesName(a) == speciesName[b]){
-                                        new_species = false;
-                                        break;
-                                    }
-                                }
-
-                                if (new_species){   // adding product to the LBM variables
-                                    speciesName.push_back(gas->speciesName(a));
-                                    nSpecies++;
-
-                                    // allocate memory for new species
-                                    this->species.resize(nSpecies);
-                                    this->species[nSpecies-1] = new SPECIES **[this->Nx];
-                                    for (int i = 0; i < this->Nx; ++i){
-                                        this->species[nSpecies-1][i] = new SPECIES *[this->Ny];
-                                        for (int j = 0; j < this->Ny; ++j){
-                                            this->species[nSpecies-1][i][j] = new SPECIES [this->Nz];
-                                        }
-                                    }                            
-                                } 
-                            }
-
-                            size_t idx_species = 0;
-                            for (size_t b = 0; b < nSpecies; ++b){
-                                if(gas->speciesName(a) == speciesName[b]){
-                                    idx_species = b;
-                                    break;
-                                }
-                            }
-                            
+                        for (size_t a = 0; a < nSpecies; ++a){                                    
                             double rho_dot = units.rho_dot(w_dot[a] * gas->molecularWeight(a));
-                            // R_a[idx_species] += rho_dot;
-                            rho_a[idx_species] += dt_sim/maxIter * rho_dot;
+                            rho_a[a] += dt_sim/maxIter * rho_dot;
                         }
 
                         for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = (species[a][i][j][k].rho+rho_a[a]) / mixture[i][j][k].rho;
-                        gas->setState_TD(units.si_temp(mixture[i][j][k].temp), units.si_rho(mixture[i][j][k].rho));
+                        gas->setState_UV(units.si_energy_mass(internalEnergy), 1.0/units.si_rho(mixture[i][j][k].rho),1.0e-15);
                         gas->setMassFractions(&Y[0]);
                         p++;
                     }while(p < maxIter);
-                    
-                    // for(size_t a = 0; a < nSpecies; ++a) 
-                    //     R_a[a] = dt_sim/maxIter * R_a[a];
 
                     // Viscosity -----------------------------------------------------------------------------------------------------------------------------                    
                     auto trans = sols[rank]->transport();
@@ -485,15 +451,11 @@ void LBM::Collide_Species()
                     // const double PR = trans->viscosity()*gas->cp_mass() / trans->thermalConductivity();       
                     // const double G_lambda = Ra*(NU*NU/PR) / (units.temp(50.0)*(Ny-2.0)*(Ny-2.0)*(Ny-2.0));
 
-                    double velocity_mix[3] = {  mixture[i][j][k].u,
-                                                mixture[i][j][k].v, 
-                                                mixture[i][j][k].w};
-
                     for (int l = 0; l < npop; ++l)
                     {
-                        double feq[nSpecies];
-                        double feq_du[nSpecies];
-                        double freact[nSpecies];
+                        double feq[nSpecies] = {};
+                        double feq_du[nSpecies] = {};
+                        double freact[nSpecies] = {};
 
                         for (size_t a = 0; a < nSpecies; ++a)
                         {
@@ -506,11 +468,10 @@ void LBM::Collide_Species()
                             double theta = units.energy_mass( gas->RT()/gas->molecularWeight(gas->speciesIndex(speciesName[a])) );
                             // double gas_const_a = units.cp(Cantera::GasConstant/gas->molecularWeight(gas->speciesIndex(speciesName[a])));
                             
-                            double delQdevx, delQdevy, delQdevz;                            
-                            delQdevx = 0.0;//fd_fuw(species[a][i-1][j][k].rho*species[a][i-1][j][k].u*(1-3*gas_const_a*mixture[i-1][j][k].temp)-species[a][i-1][j][k].rho*cb(species[a][i-1][j][k].u), species[a][i][j][k].rho*species[a][i][j][k].u*(1-3*gas_const_a*mixture[i][j][k].temp)-species[a][i][j][k].rho*cb(species[a][i][j][k].u), species[a][i+1][j][k].rho*species[a][i+1][j][k].u*(1-3*gas_const_a*mixture[i+1][j][k].temp)-species[a][i+1][j][k].rho*cb(species[a][i+1][j][k].u), dx, species[a][i][j][k].u, mixture[i-1][j][k].type, mixture[i+1][j][k].type);
-                            delQdevy = 0.0;//fd_fuw(species[a][i][j-1][k].rho*species[a][i][j-1][k].v*(1-3*gas_const_a*mixture[i][j-1][k].temp)-species[a][i][j-1][k].rho*cb(species[a][i][j-1][k].v), species[a][i][j][k].rho*species[a][i][j][k].v*(1-3*gas_const_a*mixture[i][j][k].temp)-species[a][i][j][k].rho*cb(species[a][i][j][k].v), species[a][i][j+1][k].rho*species[a][i][j+1][k].v*(1-3*gas_const_a*mixture[i][j+1][k].temp)-species[a][i][j+1][k].rho*cb(species[a][i][j+1][k].v), dy, species[a][i][j][k].v, mixture[i][j-1][k].type, mixture[i][j+1][k].type);
-                            delQdevz = 0.0;//fd_fuw(species[a][i][j][k-1].rho*species[a][i][j][k-1].w*(1-3*gas_const_a*mixture[i][j][k-1].temp)-species[a][i][j][k-1].rho*cb(species[a][i][j][k-1].w), species[a][i][j][k].rho*species[a][i][j][k].w*(1-3*gas_const_a*mixture[i][j][k].temp)-species[a][i][j][k].rho*cb(species[a][i][j][k].w), species[a][i][j][k+1].rho*species[a][i][j][k+1].w*(1-3*gas_const_a*mixture[i][j][k+1].temp)-species[a][i][j][k+1].rho*cb(species[a][i][j][k+1].w), dz, species[a][i][j][k].w, mixture[i][j][k-1].type, mixture[i][j][k+1].type);
-                            
+                            // double delQdevx, delQdevy, delQdevz;                            
+                            // delQdevx = 0.0;//fd_fuw(species[a][i-1][j][k].rho*species[a][i-1][j][k].u*(1-3*gas_const_a*mixture[i-1][j][k].temp)-species[a][i-1][j][k].rho*cb(species[a][i-1][j][k].u), species[a][i][j][k].rho*species[a][i][j][k].u*(1-3*gas_const_a*mixture[i][j][k].temp)-species[a][i][j][k].rho*cb(species[a][i][j][k].u), species[a][i+1][j][k].rho*species[a][i+1][j][k].u*(1-3*gas_const_a*mixture[i+1][j][k].temp)-species[a][i+1][j][k].rho*cb(species[a][i+1][j][k].u), dx, species[a][i][j][k].u, mixture[i-1][j][k].type, mixture[i+1][j][k].type);
+                            // delQdevy = 0.0;//fd_fuw(species[a][i][j-1][k].rho*species[a][i][j-1][k].v*(1-3*gas_const_a*mixture[i][j-1][k].temp)-species[a][i][j-1][k].rho*cb(species[a][i][j-1][k].v), species[a][i][j][k].rho*species[a][i][j][k].v*(1-3*gas_const_a*mixture[i][j][k].temp)-species[a][i][j][k].rho*cb(species[a][i][j][k].v), species[a][i][j+1][k].rho*species[a][i][j+1][k].v*(1-3*gas_const_a*mixture[i][j+1][k].temp)-species[a][i][j+1][k].rho*cb(species[a][i][j+1][k].v), dy, species[a][i][j][k].v, mixture[i][j-1][k].type, mixture[i][j+1][k].type);
+                            // delQdevz = 0.0;//fd_fuw(species[a][i][j][k-1].rho*species[a][i][j][k-1].w*(1-3*gas_const_a*mixture[i][j][k-1].temp)-species[a][i][j][k-1].rho*cb(species[a][i][j][k-1].w), species[a][i][j][k].rho*species[a][i][j][k].w*(1-3*gas_const_a*mixture[i][j][k].temp)-species[a][i][j][k].rho*cb(species[a][i][j][k].w), species[a][i][j][k+1].rho*species[a][i][j][k+1].w*(1-3*gas_const_a*mixture[i][j][k+1].temp)-species[a][i][j][k+1].rho*cb(species[a][i][j][k+1].w), dz, species[a][i][j][k].w, mixture[i][j][k-1].type, mixture[i][j][k+1].type);
                             // double corr[3] = {  dt_sim*(2-species[a][i][j][k].omega)/(2*species[a][i][j][k].rho*species[a][i][j][k].omega)*delQdevx,
                             //                     dt_sim*(2-species[a][i][j][k].omega)/(2*species[a][i][j][k].rho*species[a][i][j][k].omega)*delQdevy,
                             //                     dt_sim*(2-species[a][i][j][k].omega)/(2*species[a][i][j][k].rho*species[a][i][j][k].omega)*delQdevz};
@@ -526,15 +487,14 @@ void LBM::Collide_Species()
 
                         for(size_t a = 0; a < nSpecies; ++a)
                         {
-                            if (species[a][i][j][k].omega != species[a][i][j][k].omega) 
+                            if (species[a][i][j][k].X == 0.0 && freact[a] == 0.0) 
+                                continue;
+                            else if (species[a][i][j][k].X == 0.0)
                                 species[a][i][j][k].fpc[l] = freact[a];
                             else
                                 species[a][i][j][k].fpc[l] = species[a][i][j][k].f[l] + species[a][i][j][k].omega*(feq[a]-species[a][i][j][k].f[l]) + (feq_du[a] - feq[a]) + freact[a];
-                            
-                            // species[a][i][j][k].fpc[l] =(1.0-omega[a])*species[a][i][j][k].f[l] + omega[a]*feq[a];
-                            // std::cout << a << " | " << (feq_du[a] - feq[a]) << " | " << species[a][i][j][k].fpc[l] << std::endl;
-                            // std::cout << tau_visc[a] << std::endl;
-                            // if (tau_visc[a] < 0.6) std::cout << "unstable !!!" << std::endl;
+
+                            // std::cout << a  << " | " << species[a][i][j][k].fpc[l] << std::endl;
                         }
                     }  
                 }

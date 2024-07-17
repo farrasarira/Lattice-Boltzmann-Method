@@ -85,7 +85,6 @@
             // ###### Momentum Kinetic Equation Parameter ######
             double X = 0.0;             // mole fraction
             double rho = 0.0;           // density
-            double rho_dot = 0.0;   // rate of formation/destruction during chemical reaction.
 
             double f[npop], fpc[npop];  // distribution function, distribution function post collistion  
             double u = 0.0;     // velocity in x-direction
