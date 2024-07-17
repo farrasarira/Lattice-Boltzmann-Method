@@ -4,6 +4,7 @@
 #include "cantera.hpp"
 #include "units.hpp"
 #include <stdio.h>
+#include <iomanip>
 
 void OutputVTK(int &nout, LBM *lbm)
 {
@@ -14,7 +15,6 @@ void OutputVTK(int &nout, LBM *lbm)
 	int dx = lb.get_dx();
 	int nSpecies = lb.get_nSpecies();
 	std::vector<std::string> speciesName = lb.get_speciesName();
-	//std::cout << "nSpecies : " << speciesName[0] << " " << speciesName[1] << " " << speciesName[2] << " "  << std::endl;
 	int		i,j,k;
 	char	filename[128];
 	FILE	*fp;
@@ -108,6 +108,7 @@ void OutputVTK(int &nout, LBM *lbm)
 					val32=(float)units.si_temp(lb.mixture[i][j][k].temp); fwrite(&val32,sizeof(float),1,fp);
 				#else
 					val32=(float)lb.mixture[i][j][k].temp; fwrite(&val32,sizeof(float),1,fp);
+					// val32=(float)lb.mixture[i][j][k].internalEnergy; fwrite(&val32,sizeof(float),1,fp);
 				#endif
 			}
 		}
@@ -152,7 +153,11 @@ void OutputVTK(int &nout, LBM *lbm)
 			for(j=0;j<Ny;j++){
 				for(i=0;i<Nx;i++)
 				{
-					val32=(float) units.si_u(lb.species[a][i][j][k].Vdiff_x) ; fwrite(&val32,sizeof(float),1,fp);
+					#ifdef OUTPUT_SI
+						val32=(float) units.si_u(lb.species[a][i][j][k].Vdiff_x) ; fwrite(&val32,sizeof(float),1,fp);
+					#else
+						val32=(float) lb.species[a][i][j][k].u-lb.mixture[i][j][k].u ; fwrite(&val32,sizeof(float),1,fp);
+					#endif					
 				}
 			}
 		}
@@ -190,6 +195,7 @@ void OutputKeEns(int &step, LBM *lbm)
 	double enstro = 0;
 	double uu = 0 ;
 	double vort = 0;
+	double toten = 0.0; // Total Energy
 
 	for (int i = 0; i < Nx; i++)
 	{
@@ -230,6 +236,10 @@ void OutputKeEns(int &step, LBM *lbm)
 
 					vort = (wy-vz)*(wy-vz) + (uz-wx)*(uz-wx) + (vx-uy)*(vx-uy);
 					enstro = enstro + lb.mixture[i][j][k].rho * vort;
+
+					#ifndef ISOTHERM
+					toten = toten + lb.mixture[i][j][k].rhoe;
+					#endif
 				}
 			}
 		}
@@ -237,7 +247,8 @@ void OutputKeEns(int &step, LBM *lbm)
 	
 	std::cout << step << ",";
 	std::cout << e_kinetic << ",";
-	std::cout << enstro << std::endl;
+	std::cout << enstro << ",";
+	std::cout << std::setprecision(15) << std::fixed << toten << std::endl;
 	
 
 }

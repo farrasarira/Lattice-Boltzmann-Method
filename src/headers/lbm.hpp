@@ -49,33 +49,34 @@
         const int opposite[27] = {0,2,1,4,3,6,5,8,7,10,9,12,11,14,13,16,15,18,17,20,19,22,21,24,23,26,25};
     #endif
 
-    class LATTICE
+    class MIXTURE
     {
         public:
             short type = TYPE_F;    // type of lattice (FLUID, SOLID, ... see setup for more)
             
             // ###### Momentum Kinetic Equation Parameter ######
-            double f[npop], fpc[npop];  // distribution function, distribution function post collistion  
-            double rho;                 // macroscopic quantity
+            #ifndef MULTICOMP
+                double f[npop], fpc[npop];  // distribution function, distribution function post collistion
+            #endif
+
+            double p_tensor[3][3] = {{0., 0., 0.},    // pressure tensor
+                                        {0., 0., 0.},
+                                        {0., 0., 0.}}; 
+
+            double rho;              // macroscopic quantity
             double u = 0.0;          // velocity in x-direction
             double v = 0.0;          // velocity in y-direction
             double w = 0.0;          // velocity in z-direction
-            double p = 1./3.;           // pressure
-            double p_tensor[3][3] = {{0., 0., 0.},    // pressure tensor
-                                     {0., 0., 0.},
-                                     {0., 0., 0.}};
+            double p = 1./3.;        // pressure
 
             // ####### Energy Kinetic Equation Parameter #######
+            #ifndef ISOTHERM
             double g[npop], gpc[npop];  // energy distribution function, energy distrbution function post collision
-            double temp = 1./3.;        // temperature
             double rhoe;                // density * total energy (E)
             double energy_flux[3] = {0., 0., 0.}; // heat flux
+            #endif
 
-            // Third-order Moment Deviation
-            double dQdevx = 0.0;
-            double dQdevy = 0.0;
-            double dQdevz = 0.0;
-
+            double temp = 1./3.;        // temperature
     };
 
     class SPECIES
@@ -84,22 +85,18 @@
             // ###### Momentum Kinetic Equation Parameter ######
             double X = 0.0;             // mole fraction
             double rho = 0.0;           // density
-            // double rho_dot = 0.0;   // rate of formation/destruction during chemical reaction.
-            double Vdiff_x = 0.0;       // diffusion velocity in x direction               
-            double Vdiff_y = 0.0;       // diffusion velocity in y direction       
-            double Vdiff_z = 0.0;       // diffusion velocity in z direction
-            double delYx = 0.0;         // gradient of mass fraction in x direction
-            double delYy = 0.0;         // gradient of mass fraction in y direction
-            double delYz = 0.0;         // gradient of mass fraction in z direction
+            double rho_dot = 0.0;   // rate of formation/destruction during chemical reaction.
 
-            #ifndef FD
-                double f[npop], fpc[npop];  // distribution function, distribution function post collistion  
-                double u = 0.0;     // velocity in x-direction
-                double v = 0.0;     // velocity in y-direction
-                double w = 0.0;     // velocity in z-direction
-            #elif defined FD
-                double rho_n = 0.0;        // mixture density * mass fraction
-            #endif
+            double f[npop], fpc[npop];  // distribution function, distribution function post collistion  
+            double u = 0.0;     // velocity in x-direction
+            double v = 0.0;     // velocity in y-direction
+            double w = 0.0;     // velocity in z-direction
+
+            double p_tensor[3][3] = {{0., 0., 0.},    // pressure tensor
+                                     {0., 0., 0.},
+                                     {0., 0., 0.}};
+
+            double omega;
 
     };
 
@@ -118,14 +115,15 @@
 
             double nu = 0.001;      // kinematic viscosity
             double gas_const = 1.0; // gas constant
-            double prtl = 0.5;      // prantdl number
             double gamma = 1.4;     // gamma (Cp/Cv)
+            double Ra = 1.0;  // Reyleigh-Benard Constant
+            double prtl = 0.5;      // prantdl number
 
             size_t nSpecies = 0;
             std::vector<std::string> speciesName;
         
         public:
-            LATTICE *** mixture;
+            MIXTURE *** mixture;
             #ifdef MULTICOMP
                 std::vector<SPECIES***> species;
             #endif
@@ -137,22 +135,30 @@
 
             // calculate moment
             void calculate_moment();
-            void calculate_moment(SPECIES ***species);
+            double calculate_temp(double U, double rho, double Y[]);
 
             // calculate equlibrium density
             double calculate_feq(int l, double rho, double velocity[], double theta,  double corr[]);
+            double calculate_geq(int l, double rho, double U, double theta, double v[]);
             double calculate_geq(int l, double rhoe, double eq_heat_flux[], double eq_R_tensor[][3], double theta);
+            double calculate_gstr(int l, double geq, double d_str_heat_flux[]);
+            void calculate_feq_geq(double f_tgt[], double g_tgt[], double rho_bb, double vel_tgt[], double temp_tgt);
+            void calculate_feq_geq(double fa_tgt[][npop], double g_tgt[], double rho_bb, double rhoa_bb[], double vel_tgt[], double vela_tgt[][3], double temp_tgt);
 
             // initialize
             void Init();    // initialize equilibrium  
-            void Init(SPECIES*** species, int idxSpecies); 
 
             // collision operator
-            void Collide(); // BGK collision
+            void Collide();
             void Collide_Species();
             void FD_species();
-            void FD_BC();
             
+            // Boundary Conditions
+            void fill_BC();
+            void TMS_BC();
+            void dirSlip(int l, int i, int j, int k, int &lp, int &ip, int &jp, int &kp);
+            void FD_BC();
+
             // stream
             void Streaming();   
 
@@ -170,6 +176,7 @@
             int get_dy(){return dy;};
             int get_dz(){return dz;};
             double get_nu(){return nu;};
+
             int get_nSpecies(){return nSpecies;};
             std::vector<std::string> get_speciesName(){return speciesName;};
 
@@ -178,6 +185,10 @@
             void set_gasconst(double gas_const){this->gas_const = gas_const;};
             void set_prtl(double prtl){this->prtl = prtl;};
             void set_gamma(double gamma){this->gamma = gamma;};
+            void set_Ra(double Ra){this->Ra = Ra;};
+            double get_soundspeed(double temp){return sqrt(this->gamma*this->gas_const*temp);};
+            double get_conduc_coeff(){return nu*1.0/prtl;};
+
     };
 
 #endif
