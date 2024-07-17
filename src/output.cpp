@@ -247,9 +247,7 @@ void OutputKeEns(int &step, LBM *lbm)
 	
 	std::cout << step << ",";
 	std::cout << e_kinetic << ",";
-	std::cout << enstro << ",";
-	std::cout << std::setprecision(15) << std::fixed << toten << std::endl;
-	
+	std::cout << enstro << std::endl;
 
 }
 

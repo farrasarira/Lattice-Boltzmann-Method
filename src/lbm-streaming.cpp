@@ -58,50 +58,10 @@ void LBM::Streaming()
                             #ifndef ISOTHERM
                             mixture[i][j][k].g[l] = mixture[i][j][k].gpc[opposite[l]];
                             #endif
-                        }
-                        //---- Inlet/Outlet Boundary Condition ---------------
-                        // else if (mixture[i_nb][j_nb][k_nb].type==TYPE_I){
-                        //     #ifndef MULTICOMP
-                        //     mixture[i][j][k].f[l] = mixture[i_nb][j_nb][k_nb].f[l];
-                        //     #else
-                        //         for(size_t a = 0; a < nSpecies; ++a)
-                        //             species[a][i][j][k].f[l] = species[a][i_nb][j_nb][k_nb].f[l];
-                        //     #endif
-
-                        //     #ifndef ISOTHERM
-                        //     mixture[i][j][k].g[l] = mixture[i_nb][j_nb][k_nb].g[l];
-                        //     #endif
-                        // }
-                        // else if (mixture[i_nb][j_nb][k_nb].type==TYPE_O){
-                        //     #ifndef MULTICOMP
-                        //     mixture[i][j][k].f[l] = mixture[i_nb][j_nb][k_nb].f[l];
-                        //     #else
-                        //         for(size_t a = 0; a < nSpecies; ++a)
-                        //             species[a][i][j][k].f[l] = species[a][i_nb][j_nb][k_nb].f[l];
-                        //     #endif
-
-                        //     #ifndef ISOTHERM
-                        //     mixture[i][j][k].g[l] = mixture[i_nb][j_nb][k_nb].g[l];
-                        //     #endif
-                        // }
-                        // else if(mixture[i_nb][j_nb][k_nb].type==TYPE_P)
-                        // {
-                        //     i_nb = ((i_nb - 1 + (Nx-2)) % (Nx-2)) + 1;
-                        //     j_nb = ((j_nb - 1 + (Ny-2)) % (Ny-2)) + 1;
-                        //     k_nb = ((k_nb - 1 + (Nz-2)) % (Nz-2)) + 1;
-                            
-                        //     #ifndef MULTICOMP
-                        //     mixture[i][j][k].f[l] = mixture[i_nb][j_nb][k_nb].fpc[l];
-                        //     #else
-                        //         for(size_t a = 0; a < nSpecies; ++a)
-                        //             species[a][i][j][k].f[l] = species[a][i_nb][j_nb][k_nb].fpc[l];
-                        //     #endif
-
-                        //     #ifndef ISOTHERM
-                        //     mixture[i][j][k].g[l] = mixture[i_nb][j_nb][k_nb].gpc[l];          
-                        //     #endif          
-                        // }
+                        } 
+                        else if (mixture[i_nb][j_nb][k_nb].type==TYPE_O){ 
                         
+                        }                  
                         else //---- Periodic Boundary Condition --------------------
                         {
                             // if (i_nb < 1) i_nb = Nx-2;

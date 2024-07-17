@@ -147,6 +147,8 @@ void LBM::calculate_moment()
                             rhov_a[a] += species[a][i][j][k].f[l]*cy[l];
                             rhow_a[a] += species[a][i][j][k].f[l]*cz[l];
 
+                        // std::cout << a  << " | " << species[a][i][j][k].f[l] << std::endl;
+
                             double velocity_set[3] = {cx[l], cy[l], cz[l]};
 
                             for(int p=0; p < 3; ++p)
@@ -155,10 +157,21 @@ void LBM::calculate_moment()
                                     mixture[i][j][k].p_tensor[p][q] += species[a][i][j][k].f[l]*velocity_set[p]*velocity_set[q];
                                 }
                         }
-                        species[a][i][j][k].rho = rho_a[a];
-                        species[a][i][j][k].u = rhou_a[a] / rho_a[a];
-                        species[a][i][j][k].v = rhov_a[a] / rho_a[a];
-                        species[a][i][j][k].w = rhow_a[a] / rho_a[a];
+                        if (rho_a[a] != 0)
+                        {
+                            species[a][i][j][k].rho = rho_a[a];
+                            species[a][i][j][k].u = rhou_a[a] / rho_a[a];
+                            species[a][i][j][k].v = rhov_a[a] / rho_a[a];
+                            species[a][i][j][k].w = rhow_a[a] / rho_a[a];
+                        }
+                        else 
+                        {
+                            species[a][i][j][k].rho = 0.0;
+                            species[a][i][j][k].u = 0.0;
+                            species[a][i][j][k].v = 0.0;
+                            species[a][i][j][k].w = 0.0;
+                        }
+                        // std::cout << a << " | " << units.si_u(species[a][i][j][k].u) << std::endl;
 
                         rho += rho_a[a];
                         rhou += rhou_a[a];
@@ -224,6 +237,7 @@ void LBM::calculate_moment()
                         species[a][i][j][k].w = vector_w(a);
                     }
 
+
                     // ------------------------------------------------------------------------------------------
 
 
@@ -231,10 +245,10 @@ void LBM::calculate_moment()
                     gas->setMassFractions(&Y[0]);
 
                     #ifndef ISOTHERM
-                        double kineticEnergy = 0.0;
+                        double kineticEnergy =  0.0;
                         for (size_t a = 0; a < nSpecies; ++a)
                             kineticEnergy += 0.5 * v_sqr(species[a][i][j][k].u, species[a][i][j][k].v, species[a][i][j][k].w);
-
+                                                
                         double internalEnergy = mixture[i][j][k].rhoe/mixture[i][j][k].rho - kineticEnergy;
                         gas->setState_UV(units.si_energy_mass(internalEnergy), 1.0/units.si_rho(mixture[i][j][k].rho),1.0e-15);
                     #elif defined ISOTHERM
