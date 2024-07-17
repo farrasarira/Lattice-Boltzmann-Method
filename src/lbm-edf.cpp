@@ -97,6 +97,46 @@ double LBM::calculate_geq(int l, double rho, double U, double theta, double v[])
     return geq*rho;
 }
 
+double LBM::calculate_geq(int l, double rhoe, double eq_heat_flux[], double eq_R_tensor[][3], double theta)
+{
+    double geq = rhoe;
+    
+    double velocity_set[3] = {cx[l], cy[l], cz[l]};
+    geq += dotproduct_Vec3(eq_heat_flux, velocity_set) / theta;
+
+    double matA[3][3] = {{eq_R_tensor[0][0]-rhoe*theta, eq_R_tensor[0][1]           , eq_R_tensor[0][2]},
+                         {eq_R_tensor[1][0]           , eq_R_tensor[1][1]-rhoe*theta, eq_R_tensor[1][2]},
+                         {eq_R_tensor[2][0]           , eq_R_tensor[2][1]           , eq_R_tensor[2][2]-rhoe*theta}};
+    double matB[3][3] = {{cx[l]*cx[l]-theta  , cx[l]*cy[l]        , cx[l]*cz[l]},
+                         {cy[l]*cx[l]        , cy[l]*cy[l]-theta  , cy[l]*cz[l]},
+                         {cz[l]*cx[l]        , cz[l]*cy[l]        , cz[l]*cz[l]-theta}};
+    double result_AB = (matA[0][0]*matB[0][0] + matA[1][0]*matB[1][0] + matA[2][0]*matB[2][0]) + (matA[0][1]*matB[0][1] + matA[1][1]*matB[1][1] + matA[2][1]*matB[2][1]) + (matA[0][2]*matB[0][2] + matA[1][2]*matB[1][2] + matA[2][2]*matB[2][2]);
+    geq += result_AB/(2.0*theta*theta);
+    
+    double weight = 1.0;
+    for (int m = 0; m < 3; ++m)
+    {
+        if (velocity_set[m] == 0) weight *= (1 - theta);
+        else weight *= theta / 2.0;
+    } 
+    geq = weight * geq;
+
+    double B;
+    double Z;
+    for (int m = 0; m < 3; ++m)
+    {
+        if (v_sqr(velocity_set[0], velocity_set[1], velocity_set[2]) == 0) B = 1;
+        else if (v_sqr(velocity_set[0], velocity_set[1], velocity_set[2]) == 1) B = -0.5*abs(velocity_set[m]);
+        else B = 0;
+        
+        Z = (1-3*theta)/(2*theta) * (eq_R_tensor[m][m]-theta*rhoe);
+
+        geq += B*Z;
+    }
+
+    return geq;
+}
+
 double LBM::calculate_gstr(int l, double geq, double d_str_heat_flux[])
 {
     double velocity_set[3] = {cx[l], cy[l], cz[l]};

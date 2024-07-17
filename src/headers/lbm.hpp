@@ -56,23 +56,27 @@
             
             // ###### Momentum Kinetic Equation Parameter ######
             #ifndef MULTICOMP
-                double f[npop], fpc[npop];  // distribution function, distribution function post collistion  
+                double f[npop], fpc[npop];  // distribution function, distribution function post collistion
             #endif
+
+            double p_tensor[3][3] = {{0., 0., 0.},    // pressure tensor
+                                        {0., 0., 0.},
+                                        {0., 0., 0.}}; 
 
             double rho;              // macroscopic quantity
             double u = 0.0;          // velocity in x-direction
             double v = 0.0;          // velocity in y-direction
             double w = 0.0;          // velocity in z-direction
-            double p = 1./3.;           // pressure
-            double p_tensor[3][3] = {{0., 0., 0.},    // pressure tensor
-                                     {0., 0., 0.},
-                                     {0., 0., 0.}};
+            double p = 1./3.;        // pressure
 
             // ####### Energy Kinetic Equation Parameter #######
+            #ifndef ISOTHERM
             double g[npop], gpc[npop];  // energy distribution function, energy distrbution function post collision
-            double temp = 1./3.;        // temperature
             double rhoe;                // density * total energy (E)
             double energy_flux[3] = {0., 0., 0.}; // heat flux
+            #endif
+
+            double temp = 1./3.;        // temperature
     };
 
     class SPECIES
@@ -81,15 +85,18 @@
             // ###### Momentum Kinetic Equation Parameter ######
             double X = 0.0;             // mole fraction
             double rho = 0.0;           // density
-            // double rho_dot = 0.0;   // rate of formation/destruction during chemical reaction.
-            double Vdiff_x = 0.0;       // diffusion velocity in x direction               
-            double Vdiff_y = 0.0;       // diffusion velocity in y direction       
-            double Vdiff_z = 0.0;       // diffusion velocity in z direction
+            double rho_dot = 0.0;   // rate of formation/destruction during chemical reaction.
 
             double f[npop], fpc[npop];  // distribution function, distribution function post collistion  
             double u = 0.0;     // velocity in x-direction
             double v = 0.0;     // velocity in y-direction
             double w = 0.0;     // velocity in z-direction
+
+            double p_tensor[3][3] = {{0., 0., 0.},    // pressure tensor
+                                     {0., 0., 0.},
+                                     {0., 0., 0.}};
+
+            double omega;
 
     };
 
@@ -108,9 +115,9 @@
 
             double nu = 0.001;      // kinematic viscosity
             double gas_const = 1.0; // gas constant
-            double prtl = 0.5;      // prantdl number
             double gamma = 1.4;     // gamma (Cp/Cv)
             double Ra = 1.0;  // Reyleigh-Benard Constant
+            double prtl = 0.5;      // prantdl number
 
             size_t nSpecies = 0;
             std::vector<std::string> speciesName;
@@ -133,6 +140,7 @@
             // calculate equlibrium density
             double calculate_feq(int l, double rho, double velocity[], double theta,  double corr[]);
             double calculate_geq(int l, double rho, double U, double theta, double v[]);
+            double calculate_geq(int l, double rhoe, double eq_heat_flux[], double eq_R_tensor[][3], double theta);
             double calculate_gstr(int l, double geq, double d_str_heat_flux[]);
             void calculate_feq_geq(double f_tgt[], double g_tgt[], double rho_bb, double vel_tgt[], double temp_tgt);
             void calculate_feq_geq(double fa_tgt[][npop], double g_tgt[], double rho_bb, double rhoa_bb[], double vel_tgt[], double vela_tgt[][3], double temp_tgt);
@@ -149,6 +157,7 @@
             void fill_BC();
             void TMS_BC();
             void dirSlip(int l, int i, int j, int k, int &lp, int &ip, int &jp, int &kp);
+            void FD_BC();
 
             // stream
             void Streaming();   
@@ -167,6 +176,7 @@
             int get_dy(){return dy;};
             int get_dz(){return dz;};
             double get_nu(){return nu;};
+
             int get_nSpecies(){return nSpecies;};
             std::vector<std::string> get_speciesName(){return speciesName;};
 
