@@ -74,7 +74,7 @@ void LBM::Init()
         {
             for(int k = 0; k < Nz; ++k)
             {    
-                if (mixture[i][j][k].type == TYPE_F || mixture[i][j][k].type == TYPE_I || mixture[i][j][k].type == TYPE_O)     
+                if (mixture[i][j][k].type == TYPE_F || mixture[i][j][k].type == TYPE_I ) // || mixture[i][j][k].type == TYPE_O     
                 {            
                     // initiate Cantera object
                     int rank = omp_get_thread_num();
@@ -83,8 +83,6 @@ void LBM::Init()
                     for(size_t a = 0; a < nSpecies; ++a) X[gas->speciesIndex(speciesName[a])] = species[a][i][j][k].X;
                     gas->setMoleFractions(&X[0]);
                     gas->setState_TP(units.si_temp(mixture[i][j][k].temp), units.si_p(mixture[i][j][k].p));
-
-                    
 
                     // calculate other macropscopic properties [pressure, internal energy, enthalpy, total energy]
                     mixture[i][j][k].rho = units.rho(gas->density());
@@ -101,13 +99,14 @@ void LBM::Init()
                                                 {0., 0., 0.},
                                                 {0., 0., 0.}};
 
-
                     double corr[3] = {0, 0, 0}; 
 
                     // ------------- Energy Distribution Function Initialization -----------------------------
                     #ifndef ISOTHERM
                     for (int l = 0; l < npop; ++l)
+                    {
                         mixture[i][j][k].g[l] = calculate_geq(l, mixture[i][j][k].rho, internal_energy, theta, velocity); 
+                    }
                     #endif
 
                     // Species distribution function Initialization

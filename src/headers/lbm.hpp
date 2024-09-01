@@ -143,6 +143,7 @@
             double calculate_gstr(int l, double geq, double d_str_heat_flux[]);
             void calculate_feq_geq(double f_tgt[], double g_tgt[], double rho_bb, double vel_tgt[], double temp_tgt);
             void calculate_feq_geq(double fa_tgt[][npop], double g_tgt[], double rho_bb, double rhoa_bb[], double vel_tgt[], double vela_tgt[][3], double temp_tgt);
+            void calculate_feq_geq(double fa_tgt[][npop], double g_tgt[], double rho_bb, double rhoa_bb[], double vel_tgt[], double temp_tgt);
 
             // initialize
             void Init();    // initialize equilibrium  

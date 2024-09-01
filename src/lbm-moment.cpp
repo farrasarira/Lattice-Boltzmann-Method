@@ -147,7 +147,7 @@ void LBM::calculate_moment()
                             rhov_a[a] += species[a][i][j][k].f[l]*cy[l];
                             rhow_a[a] += species[a][i][j][k].f[l]*cz[l];
 
-                        // std::cout << a  << " | " << species[a][i][j][k].f[l] << std::endl;
+                            // std::cout << a  << " | " << species[a][i][j][k].f[l] << std::endl;
 
                             double velocity_set[3] = {cx[l], cy[l], cz[l]};
 
