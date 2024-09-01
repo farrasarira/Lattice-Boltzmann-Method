@@ -102,120 +102,6 @@ void LBM::Collide()
     }
 }
 
-// #elif defined MULTICOMP
-// void LBM::Collide()
-// {   
-//     #ifndef ISOTHERM
-
-//     #ifdef PARALLEL 
-//         // #pragma omp parallel for schedule(static, 1) 
-//     #endif
-    
-//     for(int i = 0; i < Nx ; ++i)
-//     {
-//         for(int j = 0; j < Ny; ++j)
-//         {
-//             for(int k = 0; k < Nz; ++k)
-//             {    
-//                 if (mixture[i][j][k].type == TYPE_F)     
-//                 {   
-//                     // create Cantera object
-//                     int rank = omp_get_thread_num();
-//                     auto gas = sols[rank]->thermo();
-//                     std::vector <double> Y (gas->nSpecies());
-//                     for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = species[a][i][j][k].rho / mixture[i][j][k].rho;
-//                     gas->setMassFractions(&Y[0]);
-//                     gas->setState_TD(units.si_temp(mixture[i][j][k].temp), units.si_rho(mixture[i][j][k].rho));
-//                     auto trans = sols[rank]->transport();
-
-//                     // Calculate cp
-//                     std::vector <double> part_cp(gas->nSpecies());
-//                     gas->getPartialMolarCp(&part_cp[0]);
-//                     double X_cp = 0.0;
-//                     for(size_t a = 0.0; a < nSpecies; ++a)
-//                     {
-//                         int speciesIdx = gas->speciesIndex(speciesName[a]);
-//                         double mmass = gas->molecularWeight(speciesIdx);
-//                         X_cp = X_cp + species[a][i][j][k].X*units.cp(part_cp[speciesIdx]/mmass);
-//                     }
-//                     // double cp = units.cp(gas->cp_mass());
-
-//                     // Calculate Theta
-//                     double theta = units.energy_mass(gas->RT()/gas->meanMolecularWeight());
-
-//                     // Calculate omega and omega1
-//                     double mu = units.mu(trans->viscosity());
-//                     double conduc_coeff = units.thermalConductivity(trans->thermalConductivity());
-//                     double omega1 = 2*mixture[i][j][k].p*X_cp*dt_sim / (mixture[i][j][k].p*X_cp*dt_sim + 2*conduc_coeff);
-//                     double omega = 2*mixture[i][j][k].p*dt_sim / (mixture[i][j][k].p*dt_sim + 2*mu);
-//                     // std::cout << 1/omega << " | " << 1/omega1 << std::endl;
-
-//                     // Calculate partial enthalpy ha
-//                     std::vector <double> part_enthalpy(gas->nSpecies());
-//                     gas->getPartialMolarEnthalpies(&part_enthalpy[0]);
-
-//                     // Calculate q_eq, R_eq, d_q*, q_corr
-//                     double eq_heat_flux[3] = {};
-//                     double eq_R_tensor[3][3] = {};
-//                     double d_str_heat_flux[3] = {};
-//                     double q_corr[3] = {};
-                    
-//                     for(size_t a = 0; a < nSpecies; ++a){
-//                         int speciesIdx = gas->speciesIndex(speciesName[a]);
-//                         double mmass = gas->molecularWeight(speciesIdx);
-                        
-//                         double velocity_a[3] = {};
-//                         velocity_a[0] = species[a][i][j][k].u;
-//                         velocity_a[1] = species[a][i][j][k].v;
-//                         velocity_a[2] = species[a][i][j][k].w;
-
-//                         double enthalpy = units.energy_mass(part_enthalpy[speciesIdx]/mmass);
-//                         double total_enthalpy = enthalpy + 0.5 * v_sqr(velocity_a[0], velocity_a[1], velocity_a[2]);
-//                         eq_heat_flux[0] += total_enthalpy*species[a][i][j][k].rho*species[a][i][j][k].u;
-//                         eq_heat_flux[1] += total_enthalpy*species[a][i][j][k].rho*species[a][i][j][k].v;
-//                         eq_heat_flux[2] += total_enthalpy*species[a][i][j][k].rho*species[a][i][j][k].w;
-                        
-//                         double eq_p_tensor_a[3][3] = {};
-//                         for(int p=0; p < 3; ++p)
-//                             for(int q=0; q < 3; ++q){
-//                                 eq_p_tensor_a[p][q] = (p==q) ? species[a][i][j][k].X*mixture[i][j][k].p+species[a][i][j][k].rho*velocity_a[p]*velocity_a[q] : species[a][i][j][k].rho*velocity_a[p]*velocity_a[q]; 
-//                                 eq_R_tensor[p][q] += total_enthalpy*eq_p_tensor_a[p][q] +  species[a][i][j][k].X*mixture[i][j][k].p*velocity_a[p]*velocity_a[q];
-//                             }   
-
-//                         q_corr[0] = (species[a][i][j][k].omega-omega)/(omega-omega1) * (velocity_a[0]*(species[a][i][j][k].p_tensor[0][0]-eq_p_tensor_a[0][0]) + velocity_a[1]*(species[a][i][j][k].p_tensor[1][0]-eq_p_tensor_a[1][0]) + velocity_a[2]*(species[a][i][j][k].p_tensor[2][0]-eq_p_tensor_a[2][0]));
-//                         q_corr[1] = (species[a][i][j][k].omega-omega)/(omega-omega1) * (velocity_a[0]*(species[a][i][j][k].p_tensor[0][1]-eq_p_tensor_a[0][1]) + velocity_a[1]*(species[a][i][j][k].p_tensor[1][1]-eq_p_tensor_a[1][1]) + velocity_a[2]*(species[a][i][j][k].p_tensor[2][1]-eq_p_tensor_a[2][1]));
-//                         q_corr[2] = (species[a][i][j][k].omega-omega)/(omega-omega1) * (velocity_a[0]*(species[a][i][j][k].p_tensor[0][2]-eq_p_tensor_a[0][2]) + velocity_a[1]*(species[a][i][j][k].p_tensor[1][2]-eq_p_tensor_a[1][2]) + velocity_a[2]*(species[a][i][j][k].p_tensor[2][2]-eq_p_tensor_a[2][2]));    
-
-//                         // double dY_x = fd_fuw(species[a][i-1][j][k].rho/mixture[i-1][j][k].rho, species[a][i][j][k].rho/mixture[i][j][k].rho, species[a][i+1][j][k].rho/mixture[i+1][j][k].rho, dx, species[a][i][j][k].Vdiff_x, mixture[i-1][j][k].type, mixture[i+1][j][k].type);
-//                         // double dY_y = fd_fuw(species[a][i][j-1][k].rho/mixture[i][j-1][k].rho, species[a][i][j][k].rho/mixture[i][j][k].rho, species[a][i][j+1][k].rho/mixture[i][j+1][k].rho, dy, species[a][i][j][k].Vdiff_y, mixture[i][j-1][k].type, mixture[i][j+1][k].type);
-//                         // double dY_z = fd_fuw(species[a][i][j][k-1].rho/mixture[i][j][k-1].rho, species[a][i][j][k].rho/mixture[i][j][k].rho, species[a][i][j][k+1].rho/mixture[i][j][k+1].rho, dz, species[a][i][j][k].Vdiff_z, mixture[i][j][k-1].type, mixture[i][j][k+1].type);
-
-//                         // double q_corrH[3] ={ 0.5 * (2.0-omega1)/(omega-omega1) * dt_sim * mixture[i][j][k].p * units.energy_mass(part_enthalpy[speciesIdx]/mmass) * dY_x,//species[a][i][j][k].delYx;
-//                         //                     0.5 * (2.0-omega1)/(omega-omega1) * dt_sim * mixture[i][j][k].p * units.energy_mass(part_enthalpy[speciesIdx]/mmass) * dY_y,//species[a][i][j][k].delYy;
-//                         //                     0.5 * (2.0-omega1)/(omega-omega1) * dt_sim * mixture[i][j][k].p * units.energy_mass(part_enthalpy[speciesIdx]/mmass) * dY_z};//species[a][i][j][k].delYz;    
-
-//                         d_str_heat_flux[0] += velocity_a[0]*(species[a][i][j][k].p_tensor[0][0]-eq_p_tensor_a[0][0]) + velocity_a[1]*(species[a][i][j][k].p_tensor[1][0]-eq_p_tensor_a[1][0]) + velocity_a[2]*(species[a][i][j][k].p_tensor[2][0]-eq_p_tensor_a[2][0]) + q_corr[0]; //- q_corrH[0] 
-//                         d_str_heat_flux[1] += velocity_a[0]*(species[a][i][j][k].p_tensor[0][1]-eq_p_tensor_a[0][1]) + velocity_a[1]*(species[a][i][j][k].p_tensor[1][1]-eq_p_tensor_a[1][1]) + velocity_a[2]*(species[a][i][j][k].p_tensor[2][1]-eq_p_tensor_a[2][1]) + q_corr[1]; //- q_corrH[1] 
-//                         d_str_heat_flux[2] += velocity_a[0]*(species[a][i][j][k].p_tensor[0][2]-eq_p_tensor_a[0][2]) + velocity_a[1]*(species[a][i][j][k].p_tensor[1][2]-eq_p_tensor_a[1][2]) + velocity_a[2]*(species[a][i][j][k].p_tensor[2][2]-eq_p_tensor_a[2][2]) + q_corr[2]; //- q_corrH[2] 
-//                     }
-
-//                     for (int l = 0; l < npop; ++l)
-//                     {
-//                         // ------------- Mass and Momentum collision -----------------------------                        
-//                         // mixture[i][j][k].gpc[l] = mixture[i][j][k].g[l] + omega1*(geq-mixture[i][j][k].g[l]) + (omega-omega1)*(geq-gstr);
-                        
-//                         double geq = calculate_geq(l, mixture[i][j][k].rhoe, eq_heat_flux, eq_R_tensor, theta);
-//                         double gstr = calculate_gstr(l, geq, d_str_heat_flux);
-//                         mixture[i][j][k].gpc[l] = mixture[i][j][k].g[l] + omega1*(geq-mixture[i][j][k].g[l]) + (omega-omega1)*(geq-gstr);
-//                     }     
-
-//                 }
-//             }
-//         }
-//     }
-//     #endif
-// }
-
 #elif defined MULTICOMP
 void LBM::Collide()
 {   
@@ -289,7 +175,7 @@ void LBM::Collide()
 
                         q_corr[0] += 0.5 * (2.0-omega1)/(omega-omega1) * dt_sim * mixture[i][j][k].p * units.energy_mass(part_enthalpy[speciesIdx]/mmass) * dY_x;//species[a][i][j][k].delYx;
                         q_corr[1] += 0.5 * (2.0-omega1)/(omega-omega1) * dt_sim * mixture[i][j][k].p * units.energy_mass(part_enthalpy[speciesIdx]/mmass) * dY_y;//species[a][i][j][k].delYy;
-                        q_corr[2] += 0.5 * (2.0-omega1)/(omega-omega1) * dt_sim * mixture[i][j][k].p * units.energy_mass(part_enthalpy[speciesIdx]/mmass) * dY_z;//species[a][i][j][k].delYz;              
+                        q_corr[2] += 0.5 * (2.0-omega1)/(omega-omega1) * dt_sim * mixture[i][j][k].p * units.energy_mass(part_enthalpy[speciesIdx]/mmass) * dY_z;//species[a][i][j][k].delYz;  
                     }
 
                     double delQdevx, delQdevy, delQdevz;
@@ -300,7 +186,7 @@ void LBM::Collide()
                     double d_str_heat_flux[3] ={    velocity[0]*(mixture[i][j][k].p_tensor[0][0]-eq_p_tensor[0][0]) + velocity[1]*(mixture[i][j][k].p_tensor[1][0]-eq_p_tensor[1][0]) + velocity[2]*(mixture[i][j][k].p_tensor[2][0]-eq_p_tensor[2][0]) - q_diff[0] - q_corr[0] ,   //+ q_diff[0] + q_corr[0]  + 0.5*dt_sim*velocity[0]*delQdevx
                                                     velocity[0]*(mixture[i][j][k].p_tensor[0][1]-eq_p_tensor[0][1]) + velocity[1]*(mixture[i][j][k].p_tensor[1][1]-eq_p_tensor[1][1]) + velocity[2]*(mixture[i][j][k].p_tensor[2][1]-eq_p_tensor[2][1]) - q_diff[1] - q_corr[1] ,   //+ q_diff[1] + q_corr[1]  + 0.5*dt_sim*velocity[1]*delQdevy
                                                     velocity[0]*(mixture[i][j][k].p_tensor[0][2]-eq_p_tensor[0][2]) + velocity[1]*(mixture[i][j][k].p_tensor[1][2]-eq_p_tensor[1][2]) + velocity[2]*(mixture[i][j][k].p_tensor[2][2]-eq_p_tensor[2][2]) - q_diff[2] - q_corr[2] } ; //+ q_diff[2] + q_corr[2]  + 0.5*dt_sim*velocity[2]*delQdevz
-
+                
                     // double str_heat_flux[3] ={  eq_heat_flux[0] + velocity[0]*(mixture[i][j][k].p_tensor[0][0]-eq_p_tensor[0][0]) + velocity[1]*(mixture[i][j][k].p_tensor[1][0]-eq_p_tensor[1][0]) + velocity[2]*(mixture[i][j][k].p_tensor[2][0]-eq_p_tensor[2][0]) + q_diff[0] + q_corr[0],   // - 0.5*dt_sim*velocity[0]*mixture[i][j][k].dQdevx
                     //                             eq_heat_flux[1] + velocity[0]*(mixture[i][j][k].p_tensor[0][1]-eq_p_tensor[0][1]) + velocity[1]*(mixture[i][j][k].p_tensor[1][1]-eq_p_tensor[1][1]) + velocity[2]*(mixture[i][j][k].p_tensor[2][1]-eq_p_tensor[2][1]) + q_diff[1] + q_corr[1],   // - 0.5*dt_sim*velocity[1]*mixture[i][j][k].dQdevy
                     //                             eq_heat_flux[2] + velocity[0]*(mixture[i][j][k].p_tensor[0][2]-eq_p_tensor[0][2]) + velocity[1]*(mixture[i][j][k].p_tensor[1][2]-eq_p_tensor[1][2]) + velocity[2]*(mixture[i][j][k].p_tensor[2][2]-eq_p_tensor[2][2]) + q_diff[2] + q_corr[2]} ; // - 0.5*dt_sim*velocity[2]*mixture[i][j][k].dQdevz    
@@ -354,7 +240,7 @@ void LBM::Collide_Species()
                     auto kinetics = sols[rank]->kinetics();
 
                     size_t p = 0;
-                    double maxIter = 1.0;
+                    double maxIter = 2.0;
                     double rho_a[gas->nSpecies()] = {0.0};
                     do{
                         kinetics->getNetProductionRates(&w_dot[0]); 

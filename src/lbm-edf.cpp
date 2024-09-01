@@ -188,4 +188,17 @@ void LBM::calculate_feq_geq(double fa_tgt[][npop], double g_tgt[], double rho_bb
         g_tgt[l] = calculate_geq(l, rho_bb, internal_energy, theta, vel_tgt);
     }
 }
+
+void LBM::calculate_feq_geq(double fa_tgt[][npop], double g_tgt[], double rho_bb, double rhoa_bb[], double vel_tgt[], double temp_tgt)
+{   
+
+    double vela_tgt [nSpecies][3] = {0.0};
+    for (size_t a = 0; a < nSpecies; ++a){
+        vela_tgt[a][0] = vel_tgt[0];
+        vela_tgt[a][1] = vel_tgt[1];
+        vela_tgt[a][2] = vel_tgt[2];
+
+    }
+    calculate_feq_geq(fa_tgt, g_tgt, rho_bb, rhoa_bb, vel_tgt, vela_tgt, temp_tgt);
+}
 #endif
