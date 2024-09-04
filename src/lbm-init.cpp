@@ -59,7 +59,7 @@ void LBM::Init()
             }
         }
     }
-    fill_BC();
+    // fill_BC();
 }
 
 #elif defined MULTICOMP
@@ -136,6 +136,6 @@ void LBM::Init()
         }
     }
 
-    fill_BC();
+    // fill_BC();
 }
 #endif

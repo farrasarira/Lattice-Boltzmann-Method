@@ -22,7 +22,7 @@
     // #define SOD_SHOCK_1D
     // #define SOD_SHOCK
     // #define SOD_SHOCK_SIUNIT
-    // #define TERNARY_DIFFUSION
+    #define TERNARY_DIFFUSION
     // #define SHEAR_LAYER_MULTICOMP
     // #define PERFECTLY_STIRRED_REACTOR_3D
     // #define CONDUCTION_1D
@@ -35,7 +35,7 @@
     // #define RB_INSTABILITY_MULTICOMP
     // #define CONDUCTION_BLACK
     // #define VISCOSITY_TEST_MULTICOMP
-    #define OPPOSED_JET
+    // #define OPPOSED_JET
     // #define OPPOSED_JET_MULTICOMP
     // #define POINT_COMBUSTION_2D
     // #define FLAME_SPEED
@@ -44,6 +44,9 @@
 
     // ################ ISOTHERMAL ###################
     // #define ISOTHERM
+
+    // ################# REACTION ####################
+    #define REACTION
     
     // ####### USE FD for species conservation #######
     // Uncomment for using LBM instead

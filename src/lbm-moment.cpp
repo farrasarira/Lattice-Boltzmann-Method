@@ -81,7 +81,7 @@ void LBM::calculate_moment()
         }
     }
 
-    fill_BC();
+    // fill_BC();
 }
 
 #elif defined MULTICOMP
@@ -267,7 +267,7 @@ void LBM::calculate_moment()
         }
     }
 
-    fill_BC();
+    // fill_BC();
 }
 
 // void LBM::calculate_moment()
