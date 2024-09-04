@@ -2,7 +2,7 @@
 
 TARGET= LBM
 CXX= g++
-CXXFLAGS=-Wall -O3 -fopenmp -march=native
+CXXFLAGS=-Wall -O3 -ffast-math -fopenmp -march=native
 SRCDIR= ./src
 OBJDIR= ./obj
 RESTART= ./restart
