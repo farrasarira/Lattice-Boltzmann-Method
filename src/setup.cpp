@@ -768,30 +768,29 @@ void main_setup() // SOD SHOCK TUBE WITH SI UNIT -------------------------------
 
 void main_setup() // Ternary Gas Diffusion --------------------------------------------------------
 {
-    int NX = 3000; 
+    int NX = 864; 
     int NY = 1; 
     int NZ = 1;
        
     //  std::vector<std::string> species = { "Ar", "N2" };
-     std::vector<std::string> species = { "Ar" };
+    //  std::vector<std::string> species = { "Ar" };
     // std::vector<std::string> species = {"H2"};
-    //  std::vector<std::string> species = { "H2", "Ar", "CH4" };
+     std::vector<std::string> species = { "H2", "Ar", "CH4" };
     LBM lb(NX, NY, NZ, species);
     int Nx = lb.get_Nx(); int Ny = lb.get_Ny(); int Nz = lb.get_Nz();
 
     auto sol = Cantera::newSolution("gri30.yaml", "gri30");
     auto gas = sol->thermo();   
     std::vector <double> X (gas->nSpecies());
+    X[gas->speciesIndex("H2")] = 1;
     X[gas->speciesIndex("Ar")] = 1;
-    // X[gas->speciesIndex("N2")] = 1;
-    // X[gas->speciesIndex("CH4")] = 1;
+    X[gas->speciesIndex("CH4")] = 1;
 
-    // X[gas->speciesIndex("H2")] = 1.0;
     gas->setMoleFractions(&X[0]);
     gas->setState_TP(300.0, 1*Cantera::OneAtm);
     auto trans = sol->transport();
 
-    double dx = 1e-7;
+    double dx = 1e-6;
     units.set_m_kg_s(dx, 1E-4*dx);
     // units.set_m_kg_s(0.000001, gas->soundSpeed());
     // units.set_m_kg_s(0.00001, gas->soundSpeed());
@@ -810,10 +809,7 @@ void main_setup() // Ternary Gas Diffusion -------------------------------------
     std::cout << "temperature : " << units.temp(gas->temperature()) << std::endl;
     std::cout << "gamma : " << gas->cp_mass()/gas->cv_mass() << std::endl;
     std::cout << "sound speed : " << units.u(gas->soundSpeed()) << std::endl;
-    // std::cout << "ux mean : " <<  u0 << std::endl;
     std::cout << "RT : " << units.cp(Cantera::GasConstant/gas->meanMolecularWeight())*units.temp(gas->temperature()) << std::endl;
-
-    // double uy = 0.2 * units.u(gas->soundSpeed()) ;
 
     #pragma omp parallel for
     for(int i = 0; i < Nx ; ++i)
@@ -834,9 +830,9 @@ void main_setup() // Ternary Gas Diffusion -------------------------------------
 
                 if (lb.mixture[i][j][k].type == TYPE_F)
                 {
-                    // lb.species[0][i][j][k].X = smooth(0.491, 0.000, i, 0.5*Nx, 0.3);
-                    // lb.species[1][i][j][k].X = smooth(0.509, 0.485, i, 0.5*Nx, 0.3);
-                    // lb.species[2][i][j][k].X = smooth(0.000, 0.515, i, 0.5*Nx, 0.3);
+                    lb.species[0][i][j][k].X = smooth(0.491, 1e-6, i, 0.5*Nx, 0.3);
+                    lb.species[1][i][j][k].X = smooth(0.509, 0.485, i, 0.5*Nx, 0.3);
+                    lb.species[2][i][j][k].X = smooth(1e-6, 0.515, i, 0.5*Nx, 0.3);
 
                     // lb.species[0][i][j][k].X = smooth(0.491, 0.300, i, 0.5*Nx, 0.03);
                     // lb.species[1][i][j][k].X = smooth(0.209, 0.185, i, 0.5*Nx, 0.03);
@@ -848,10 +844,10 @@ void main_setup() // Ternary Gas Diffusion -------------------------------------
                     // lb.species[0][i][j][k].X = smooth(0.9, 0.1, i, 0.5*Nx, 0.3);
                     // lb.species[1][i][j][k].X = smooth(0.1, 0.9, i, 0.5*Nx, 0.3);
 
-                    lb.species[0][i][j][k].X = smooth(1.0, 1.0, i, 0.5*Nx, 0.3);
+                    // lb.species[0][i][j][k].X = smooth(1.0, 1.0, i, 0.5*Nx, 0.3);
                     
                     lb.mixture[i][j][k].p = smooth(units.p(Cantera::OneAtm), units.p(Cantera::OneAtm), i, 0.5*Nx, 0.03);      
-                    lb.mixture[i][j][k].temp = smooth(units.temp(2700.0), units.temp(300.0), i, 0.5*Nx, 0.01);                  
+                    lb.mixture[i][j][k].temp = smooth(units.temp(300.0), units.temp(300.0), i, 0.5*Nx, 0.01);                  
                   
                     lb.mixture[i][j][k].u = 0.0;
                     lb.mixture[i][j][k].v = 0.0;
@@ -862,7 +858,7 @@ void main_setup() // Ternary Gas Diffusion -------------------------------------
         }
     }
 
-    lb.run(10000,1000);
+    lb.run(10000000,1000);
 }
 
 
@@ -1786,9 +1782,10 @@ void main_setup() // 2D Opposed Jet --------------------------------------------
                 // set periodic boundary condition
                 if ( k==0 || k==Nz-1 ) 
                     lb.mixture[i][j][k].type = TYPE_P;
-               
+                
+                // Left and Right Boundary Condition
                 if ( i==0 || i==Nx-1)
-                    lb.mixture[i][j][k].type = TYPE_O;
+                    lb.mixture[i][j][k].type = TYPE_A;
 
                 // Upper and Lower Boundary Condition
                 if ( j==0 || j==Ny-1 )

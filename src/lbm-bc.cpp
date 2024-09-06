@@ -420,12 +420,11 @@ void LBM::TMS_BC()
                             j_nb = j - cy[l];
                             k_nb = k - cz[l];
 
-                            if(mixture[i_nb][j_nb][k_nb].type==TYPE_I && mixture[int (i+cx[l])][int (j+cy[l])][int (k+cz[l])].type==TYPE_F){    
+                            if(mixture[i_nb][j_nb][k_nb].type==TYPE_I && mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].type==TYPE_F){    
                                 interface_nodes[l] = true;
                                 n_d = n_d + 1;
-                                break;
                             }                            
-                        }
+                        }                        
 
                         // check if there is the node is the interface with boundary
                         if (n_d == 0)
@@ -435,15 +434,21 @@ void LBM::TMS_BC()
                         double T_in = 0.0;
                         double rho_in = 0.0;
                         for (int l=0; l < npop; ++l){
+                            double q = 0.5;
                             if (interface_nodes[l] == true){
-                                vel_in[0] = mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].u;
-                                vel_in[1] = mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].v;
-                                vel_in[2] = mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].w;
-                                T_in = mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].temp;
-                                rho_in = mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].rho;
-                                break;
+                                vel_in[0] += (q*mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].u+mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].u)/(1.0+q);
+                                vel_in[1] += (q*mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].v+mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].v)/(1.0+q);
+                                vel_in[2] += (q*mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].w+mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].w)/(1.0+q);
+                                T_in += (q*mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].temp+mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].temp)/(1.0+q);
+                                rho_in += mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].rho;
                             }
                         }
+
+                        vel_in[0] = 1.0/n_d * vel_in[0];
+                        vel_in[1] = 1.0/n_d * vel_in[1];
+                        vel_in[2] = 1.0/n_d * vel_in[2];
+                        T_in = 1.0/n_d * T_in;
+                        rho_in = 1.0/n_d * rho_in;
 
                         // std::cout << i << " | " << vel_in[0] << " | " << T_in << std::endl;
                         calculate_feq_geq(f_in, g_in, rho_in, vel_in, T_in);
