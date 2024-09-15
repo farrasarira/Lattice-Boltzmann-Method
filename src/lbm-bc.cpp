@@ -641,8 +641,12 @@ void LBM::TMS_BC()
                             vel_loc[2] = 0.0;
                         }
 
+                        #ifndef ISOTHERM
                         double internalEnergy=rhoe_loc/rho_loc - 0.5*v_sqr(vel_loc[0], vel_loc[1], vel_loc[2]);                     
                         double T_loc = calculate_temp(internalEnergy, rho_loc, rhoa_loc);
+                        #else
+                        double T_loc = T_in;
+                        #endif
 
                         calculate_feq_geq(fa_loc, g_loc, rho_loc, rhoa_loc, vel_loc, vela_loc, T_loc);
                         calculate_feq_geq(fa_tgt, g_tgt, rho_loc, rhoa_loc, vel_in, T_in);
@@ -830,7 +834,6 @@ void LBM::TMS_BC()
                         double vel_out[3] = {0.0};
                         double T_out = 0.0;
                         double rhoa_out[nSpecies] = {0.0};
-                        double vela_out[nSpecies][3] = {0.0};
                         for (int l=0; l < npop; ++l){
                             if (interface_nodes[l] == true){
                                 vel_out[0] = mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].u;
@@ -838,18 +841,14 @@ void LBM::TMS_BC()
                                 vel_out[2] = mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].w;
                                 T_out      = mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].temp;
                                 rho_out    = mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].rho;
-                                for(size_t a = 0; a < nSpecies; ++a){
+                                for(size_t a = 0; a < nSpecies; ++a)
                                     rhoa_out[a]    = species[a][(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].rho;
-                                    vela_out[a][0] = species[a][(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].u;
-                                    vela_out[a][1] = species[a][(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].v;
-                                    vela_out[a][2] = species[a][(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].w;
-                                }
                                 break;
                             }
                         }
 
                         // std::cout << i << " | " << vel_in[0] << " | " << T_in << std::endl;
-                        calculate_feq_geq(fa_out, g_out, rho_out, rhoa_out, vel_out, vela_out, T_out);
+                        calculate_feq_geq(fa_out, g_out, rho_out, rhoa_out, vel_out, T_out);
 
                         // // step 2: calculate f_loc, g_loc, and fa_loc (local distribution function)
                         double rho_loc = 0.0;
@@ -915,9 +914,13 @@ void LBM::TMS_BC()
                             vel_loc[2] = 0.0;
                         }
 
+                        #ifndef ISOTHERM
                         double internalEnergy=rhoe_loc/rho_loc - 0.5*v_sqr(vel_loc[0], vel_loc[1], vel_loc[2]);      
                         double T_loc = calculate_temp(internalEnergy, rho_loc, rhoa_loc);
-                        calculate_feq_geq(fa_loc, g_loc, rho_loc, rhoa_loc, vel_loc, vela_loc, T_loc);
+                        #else
+                        double T_loc = T_out;
+                        #endif
+                        calculate_feq_geq(fa_loc, g_loc, rho_loc, rhoa_loc, vel_loc, vela_loc, T_out);
 
                         for (int l=0; l < npop; ++l){
                             i_nb = i - cx[l];
