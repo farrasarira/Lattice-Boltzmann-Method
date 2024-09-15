@@ -74,14 +74,14 @@ void LBM::Streaming()
                         else if (mixture[i_nb][j_nb][k_nb].type==TYPE_I)
                         { 
                             // #ifndef MULTICOMP
-                            // mixture[i][j][k].f[l] = mixture[i][j][k].fpc[opposite[l]];
+                            // mixture[i][j][k].f[l] = mixture[i_nb][j_nb][k_nb].f[l];
                             // #else
                             //     for(size_t a = 0; a < nSpecies; ++a)
                             //         species[a][i][j][k].f[l] = species[a][i][j][k].fpc[opposite[l]];
                             // #endif
 
                             // #ifndef ISOTHERM
-                            // mixture[i][j][k].g[l] = mixture[i][j][k].gpc[opposite[l]];
+                            // mixture[i][j][k].g[l] = mixture[i_nb][j_nb][k_nb].f[l];
                             // #endif       
                         }                  
                         else //---- Periodic Boundary Condition --------------------
