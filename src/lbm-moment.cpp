@@ -94,6 +94,7 @@ void LBM::calculate_moment()
         for (int j = 0; j < Ny; ++j){
             for (int k = 0; k < Nz; ++k){
                 if (mixture[i][j][k].type==TYPE_F){
+
                     // create Cantera Object
                     int rank = omp_get_thread_num();
                     auto gas = sols[rank]->thermo();
@@ -236,7 +237,6 @@ void LBM::calculate_moment()
                         species[a][i][j][k].v = vector_v(a);
                         species[a][i][j][k].w = vector_w(a);
                     }
-
 
                     // ------------------------------------------------------------------------------------------
 
