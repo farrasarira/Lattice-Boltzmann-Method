@@ -58,7 +58,7 @@ void main_setup() // 2D Flow over cylinder -------------------------------------
                 }
                 if (i == 0 )
                 {
-                    lb.mixture[i][j][k].type = TYPE_I;  // Equilibrium inlet and outlet
+                    lb.mixture[i][j][k].type = TYPE_I_C;  // Equilibrium inlet and outlet
                     lb.mixture[i][j][k].u = u_max;
                     lb.mixture[i][j][k].p = T0;
                     lb.mixture[i][j][k].temp = T0;
@@ -768,7 +768,7 @@ void main_setup() // SOD SHOCK TUBE WITH SI UNIT -------------------------------
 
 void main_setup() // Ternary Gas Diffusion --------------------------------------------------------
 {
-    int NX = 864; 
+    int NX = 600; 
     int NY = 1; 
     int NZ = 1;
        
@@ -790,7 +790,7 @@ void main_setup() // Ternary Gas Diffusion -------------------------------------
     gas->setState_TP(300.0, 1*Cantera::OneAtm);
     auto trans = sol->transport();
 
-    double dx = 1e-6;
+    double dx = 1E-5;
     units.set_m_kg_s(dx, 1E-4*dx);
     // units.set_m_kg_s(0.000001, gas->soundSpeed());
     // units.set_m_kg_s(0.00001, gas->soundSpeed());
@@ -811,6 +811,8 @@ void main_setup() // Ternary Gas Diffusion -------------------------------------
     std::cout << "sound speed : " << units.u(gas->soundSpeed()) << std::endl;
     std::cout << "RT : " << units.cp(Cantera::GasConstant/gas->meanMolecularWeight())*units.temp(gas->temperature()) << std::endl;
 
+    double delta = 1e-5; // 
+
     #pragma omp parallel for
     for(int i = 0; i < Nx ; ++i)
     {
@@ -830,9 +832,9 @@ void main_setup() // Ternary Gas Diffusion -------------------------------------
 
                 if (lb.mixture[i][j][k].type == TYPE_F)
                 {
-                    lb.species[0][i][j][k].X = smooth(0.491, 1e-6, i, 0.5*Nx, 0.3);
-                    lb.species[1][i][j][k].X = smooth(0.509, 0.485, i, 0.5*Nx, 0.3);
-                    lb.species[2][i][j][k].X = smooth(1e-6, 0.515, i, 0.5*Nx, 0.3);
+                    lb.species[0][i][j][k].X = smooth(0.491-delta, 2*delta, i, 0.5*Nx, 0.3);
+                    lb.species[1][i][j][k].X = smooth(0.509-delta, 0.485-delta, i, 0.5*Nx, 0.3);
+                    lb.species[2][i][j][k].X = smooth(2*delta, 0.515-delta, i, 0.5*Nx, 0.3);
 
                     // lb.species[0][i][j][k].X = smooth(0.491, 0.300, i, 0.5*Nx, 0.03);
                     // lb.species[1][i][j][k].X = smooth(0.209, 0.185, i, 0.5*Nx, 0.03);
@@ -858,7 +860,7 @@ void main_setup() // Ternary Gas Diffusion -------------------------------------
         }
     }
 
-    lb.run(10000000,1000);
+    lb.run(1000000000,1000);
 }
 
 
@@ -1744,93 +1746,7 @@ void main_setup() // 2D Opposed Jet --------------------------------------------
     double NY = 400;
     double NZ = 1;
 
-    double jet_width = 0.4*NY; 
-   
-    // std::vector<std::string> species = {"Ar"};
-    // LBM lb(NX, NY, NZ, species);
-    LBM lb(NX, NY, NZ, 0.1);
-    int Nx = lb.get_Nx(); int Ny = lb.get_Ny(); int Nz = lb.get_Nz();
-
-    // auto sol = Cantera::newSolution("gri30.yaml", "gri30");
-    // auto gas = sol->thermo();   
-    // std::vector <double> X (gas->nSpecies());
-    // X[gas->speciesIndex("Ar")] = 1.0;
-    // gas->setMoleFractions(&X[0]);
-    // gas->setState_TP(300.0, 1*Cantera::OneAtm);
-    // auto trans = sol->transport();
-
-    // units.set_m_kg_s(1e-5, 1e-9);
- 
-    // double NU = units.nu(trans->viscosity() / gas->density());
-    // double prandtl = trans->viscosity()*gas->cp_mass() / trans->thermalConductivity();
-    double u0 = 0.02;
-    
-    // std::cout << "nu : " << NU << std::endl;
-    // std::cout << "nu (unit) : " << trans->viscosity() / gas->density() << std::endl;
-    // std::cout << "prandtl number : " << prandtl << std::endl;
-    // std::cout << "gas const : " << units.cp(Cantera::GasConstant/gas->meanMolecularWeight()) << std::endl;
-    // std::cout << "temperature : " << units.temp(gas->temperature()) << std::endl;
-    // std::cout << "gamma : " << gas->cp_mass()/gas->cv_mass() << std::endl;
-    // std::cout << "sound speed : " << units.u(gas->soundSpeed()) << std::endl;
-    // std::cout << "ux mean : " <<  u0 << std::endl;
-    // std::cout << "RT : " << units.cp(Cantera::GasConstant/gas->meanMolecularWeight())*units.temp(gas->temperature()) << std::endl;
-    
-    #pragma omp parallel for
-    for(int i = 0; i < Nx ; ++i){
-        for(int j = 0; j < Ny; ++j){
-            for(int k = 0; k < Nz; ++k){
-                // set periodic boundary condition
-                if ( k==0 || k==Nz-1 ) 
-                    lb.mixture[i][j][k].type = TYPE_P;
-                
-                // Left and Right Boundary Condition
-                if ( i==0 || i==Nx-1)
-                    lb.mixture[i][j][k].type = TYPE_A;
-
-                // Upper and Lower Boundary Condition
-                if ( j==0 || j==Ny-1 )
-                    lb.mixture[i][j][k].type = TYPE_O;
-
-                // Left Inlet Boundary Condition
-                if ( i==0 && j > NY/2 - jet_width && j < NY/2 + jet_width ) 
-                {
-                    lb.mixture[i][j][k].type = TYPE_I;
-                    lb.mixture[i][j][k].u = u0;
-                    lb.mixture[i][j][k].temp = 0.1;
-                    lb.mixture[i][j][k].p = 0.1; 
-                }
-                // Right Inlet Boundary Condition
-                if ( i==Nx-1 && j > NY/2 - jet_width && j < NY/2 + jet_width)
-                {
-                    lb.mixture[i][j][k].type = TYPE_I;
-                    lb.mixture[i][j][k].u = -u0;
-                    lb.mixture[i][j][k].temp = 0.1;
-                    lb.mixture[i][j][k].p = 0.1; 
-                }
-                
-                if (lb.mixture[i][j][k].type == TYPE_F)
-                {
-                    // lb.species[0][i][j][k].X = 1.0;
-                    lb.mixture[i][j][k].u = 0.0;
-                    lb.mixture[i][j][k].v = 0;
-                    lb.mixture[i][j][k].w = 0.0;
-                    lb.mixture[i][j][k].temp = 0.1;
-                    lb.mixture[i][j][k].p = 0.1;                    
-                }
-            }
-        }
-    }
-    lb.run(15000,100);
-}
-
-#elif defined OPPOSED_JET_MULTICOMP
-void main_setup() // 2D Opposed Jet --------------------------------------------------------
-{
-    double NX = 100;
-    double NY = 200;
-    double NZ = 1;
-
-    double jet_width = 0.4*NY; 
+    double jet_width = 0.2*NY; 
    
     // std::vector<std::string> species = {"Ar"};
     // LBM lb(NX, NY, NZ, species);
@@ -1868,18 +1784,28 @@ void main_setup() // 2D Opposed Jet --------------------------------------------
                 // set periodic boundary condition
                 if ( k==0 || k==Nz-1 ) 
                     lb.mixture[i][j][k].type = TYPE_P;
-               
+
                 // Upper and Lower Boundary Condition
                 if ( j==0 || j==Ny-1 )
-                    lb.mixture[i][j][k].type = TYPE_O;
-               
+                {
+                    lb.mixture[i][j][k].type = TYPE_O_E;
+                    lb.mixture[i][j][k].p = 0.1; 
+                    lb.mixture[i][j][k].temp = 0.1;
+                }
+                
+                // Left and Right Boundary Condition
                 if ( i==0 || i==Nx-1)
-                    lb.mixture[i][j][k].type = TYPE_A;
+                {
+                    lb.mixture[i][j][k].type = TYPE_O_E;
+                    lb.mixture[i][j][k].u = 0.0;
+                    lb.mixture[i][j][k].temp = 0.1;
+                    lb.mixture[i][j][k].p = 0.1; 
+                }
 
                 // Left Inlet Boundary Condition
                 if ( i==0 && j > NY/2 - jet_width && j < NY/2 + jet_width ) 
                 {
-                    lb.mixture[i][j][k].type = TYPE_I;
+                    lb.mixture[i][j][k].type = TYPE_I_E;
                     lb.mixture[i][j][k].u = u0;
                     lb.mixture[i][j][k].temp = 0.1;
                     lb.mixture[i][j][k].p = 0.1; 
@@ -1887,7 +1813,7 @@ void main_setup() // 2D Opposed Jet --------------------------------------------
                 // Right Inlet Boundary Condition
                 if ( i==Nx-1 && j > NY/2 - jet_width && j < NY/2 + jet_width)
                 {
-                    lb.mixture[i][j][k].type = TYPE_I;
+                    lb.mixture[i][j][k].type = TYPE_I_E;
                     lb.mixture[i][j][k].u = -u0;
                     lb.mixture[i][j][k].temp = 0.1;
                     lb.mixture[i][j][k].p = 0.1; 
@@ -1905,7 +1831,192 @@ void main_setup() // 2D Opposed Jet --------------------------------------------
             }
         }
     }
-    lb.run(10000,100);
+    lb.run(15000000,100);
+}
+
+#elif defined OPPOSED_JET_MULTICOMP
+void main_setup() // 2D Opposed Jet --------------------------------------------------------
+{
+    double NX = 50;//200;
+    double NY = 50;//400;
+    double NZ = 1;
+   
+    double jet_width = 0.2*NY; 
+    double Mach = 0.1;
+    double temp0 = 300.0;
+    double press0 = Cantera::OneAtm;
+    // std::vector<std::string> species = {"H2", "N2" , "O2", "H2O"};
+    std::vector<std::string> species = {"N2", "O2"};
+    
+    LBM lb(NX, NY, NZ, species);
+    int Nx = lb.get_Nx(); int Ny = lb.get_Ny(); int Nz = lb.get_Nz();
+
+    auto sol = Cantera::newSolution("gri30.yaml", "gri30");
+    auto gas = sol->thermo();   
+    std::vector <double> X (gas->nSpecies());
+    // X[gas->speciesIndex("H2")] = 0.10;
+    X[gas->speciesIndex("N2")] = 1.0;//0.85;
+    X[gas->speciesIndex("O2")] = 1.0;//0.0;
+    // X[gas->speciesIndex("H2O")] = 0.05;
+    gas->setMoleFractions(&X[0]);
+    gas->setState_TP(temp0, press0);
+    auto trans = sol->transport();
+
+    units.set_m_kg_s(1e-6, 4e-10);
+ 
+    double NU = units.nu(trans->viscosity() / gas->density());
+    double prandtl = trans->viscosity()*gas->cp_mass() / trans->thermalConductivity();
+    double sound_spd = units.u(gas->soundSpeed());
+
+    double u0 = Mach * sound_spd;;
+    
+    std::cout << "nu : " << NU << std::endl;
+    std::cout << "nu (unit) : " << trans->viscosity() / gas->density() << std::endl;
+    std::cout << "prandtl number : " << prandtl << std::endl;
+    std::cout << "gas const : " << units.cp(Cantera::GasConstant/gas->meanMolecularWeight()) << std::endl;
+    std::cout << "temperature : " << units.temp(gas->temperature()) << std::endl;
+    std::cout << "gamma : " << gas->cp_mass()/gas->cv_mass() << std::endl;
+    std::cout << "sound speed : " << units.u(gas->soundSpeed()) << std::endl;
+    std::cout << "ux mean : " <<  u0 << std::endl;
+    std::cout << "RT : " << units.cp(Cantera::GasConstant/gas->meanMolecularWeight())*units.temp(gas->temperature()) << std::endl;
+    
+    // #pragma omp parallel for
+    // for(int i = 0; i < Nx ; ++i){
+    //     for(int j = 0; j < Ny; ++j){
+    //         for(int k = 0; k < Nz; ++k){
+    //             // set periodic boundary condition
+    //             if ( k==0 || k==Nz-1 ) 
+    //                 lb.mixture[i][j][k].type = TYPE_P;
+               
+    //             // Upper and Lower Boundary Condition
+    //             if ( j==0 || j==Ny-1 )
+    //             {
+    //                 lb.mixture[i][j][k].type = TYPE_O_E;
+    //                 lb.mixture[i][j][k].temp = units.temp(temp0);
+    //                 lb.mixture[i][j][k].p = units.p(press0); 
+    //             }
+               
+    //             if ( i==0 || i==Nx-1)
+    //             {
+    //                 lb.mixture[i][j][k].type = TYPE_I_E;
+    //                 lb.mixture[i][j][k].u = 0.0;
+    //                 lb.mixture[i][j][k].temp = units.temp(temp0);
+    //                 lb.mixture[i][j][k].p = units.p(press0); 
+
+    //                 lb.species[0][i][j][k].X = 0.05;
+    //                 lb.species[1][i][j][k].X = 0.90;
+    //                 lb.species[2][i][j][k].X = 0.05;
+    //                 lb.species[3][i][j][k].X = 0.05;
+    //             }
+
+    //             // Left Inlet Boundary Condition
+    //             if ( i==0 && j > NY/2 - jet_width && j < NY/2 + jet_width ) 
+    //             {
+    //                 lb.mixture[i][j][k].type = TYPE_I_E;
+    //                 lb.mixture[i][j][k].u = u0;
+    //                 lb.mixture[i][j][k].temp = units.temp(temp0);
+    //                 lb.mixture[i][j][k].p = units.p(press0); 
+
+    //                 lb.species[0][i][j][k].X = 0.10;
+    //                 lb.species[1][i][j][k].X = 0.85;
+    //                 lb.species[2][i][j][k].X = 0.00;
+    //                 lb.species[3][i][j][k].X = 0.05;
+    //             }
+    //             // Right Inlet Boundary Condition
+    //             if ( i==Nx-1 && j > NY/2 - jet_width && j < NY/2 + jet_width)
+    //             {
+    //                 lb.mixture[i][j][k].type = TYPE_I_E;
+    //                 lb.mixture[i][j][k].u = -u0;
+    //                 lb.mixture[i][j][k].temp = units.temp(temp0);
+    //                 lb.mixture[i][j][k].p = units.p(press0); 
+
+    //                 lb.species[0][i][j][k].X = 0.00;
+    //                 lb.species[1][i][j][k].X = 0.90;
+    //                 lb.species[2][i][j][k].X = 0.10;
+    //                 lb.species[3][i][j][k].X = 0.00;
+    //             }
+                
+    //             if (lb.mixture[i][j][k].type == TYPE_F)
+    //             {
+    //                 lb.mixture[i][j][k].u = 0.0;
+    //                 lb.mixture[i][j][k].v = 0;
+    //                 lb.mixture[i][j][k].w = 0.0;
+    //                 lb.mixture[i][j][k].temp = units.temp(temp0);
+    //                 lb.mixture[i][j][k].p = units.p(press0); 
+
+    //                 lb.species[0][i][j][k].X = 0.05;
+    //                 lb.species[1][i][j][k].X = 0.90;
+    //                 lb.species[2][i][j][k].X = 0.05;
+    //                 lb.species[3][i][j][k].X = 0.05;
+    //             }
+    //         }
+    //     }
+    // }
+
+    #pragma omp parallel for
+    for(int i = 0; i < Nx ; ++i){
+        for(int j = 0; j < Ny; ++j){
+            for(int k = 0; k < Nz; ++k){
+                // set periodic boundary condition
+                if ( k==0 || k==Nz-1 ) 
+                    lb.mixture[i][j][k].type = TYPE_P;
+               
+                // Upper and Lower Boundary Condition
+                if ( j==0 || j==Ny-1 )
+                {
+                    lb.mixture[i][j][k].type = TYPE_P;
+                    lb.mixture[i][j][k].temp = units.temp(temp0);
+                    lb.mixture[i][j][k].p = units.p(press0); 
+                }
+               
+                if ( i==0 || i==Nx-1)
+                {
+                    lb.mixture[i][j][k].type = TYPE_O_E;
+                    lb.mixture[i][j][k].u = 0.0;
+                    lb.mixture[i][j][k].temp = units.temp(temp0);
+                    lb.mixture[i][j][k].p = units.p(press0); 
+
+                    lb.species[0][i][j][k].X = 1.0;
+                }
+
+                if ( i==0 )
+                {
+                    lb.mixture[i][j][k].type = TYPE_O_E;
+                    lb.mixture[i][j][k].u = 0.0;
+                    lb.mixture[i][j][k].temp = units.temp(temp0);
+                    lb.mixture[i][j][k].p = units.p(press0); 
+
+                    lb.species[0][i][j][k].X = 1.0;
+                }
+
+                // Left Inlet Boundary Condition
+                if ( i==0 && j > NY/2 - jet_width && j < NY/2 + jet_width ) 
+                {
+                    lb.mixture[i][j][k].type = TYPE_I_E;
+                    lb.mixture[i][j][k].u = u0;
+                    lb.mixture[i][j][k].temp = units.temp(temp0);
+                    lb.mixture[i][j][k].p = units.p(press0); 
+
+                    lb.species[1][i][j][k].X = 1.0;
+                }
+                
+                if (lb.mixture[i][j][k].type == TYPE_F)
+                {
+                    lb.mixture[i][j][k].u = 0.0;
+                    lb.mixture[i][j][k].v = 0;
+                    lb.mixture[i][j][k].w = 0.0;
+                    lb.mixture[i][j][k].temp = units.temp(temp0);
+                    lb.mixture[i][j][k].p = units.p(press0); 
+
+                    lb.species[0][i][j][k].X = 1.0;
+                    lb.species[1][i][j][k].X = 1.0E-3;
+
+                }
+            }
+        }
+    }
+
+    lb.run(1000000000,1);
 }
 
 #elif defined POINT_COMBUSTION_2D
@@ -2005,10 +2116,10 @@ void main_setup() // Perfectly stirred reactor ---------------------------------
                 }
                 if (i==Nx-1)
                 {
-                    lb.mixture[i][j][k].type = TYPE_O;
+                    lb.mixture[i][j][k].type = TYPE_O_E;
                 }
 
-                if (lb.mixture[i][j][k].type == TYPE_F || lb.mixture[i][j][k].type == TYPE_O)
+                if (lb.mixture[i][j][k].type == TYPE_F || lb.mixture[i][j][k].type == TYPE_O_E)
                 {
                     lb.mixture[i][j][k].p = 1.0*units.p(Cantera::OneAtm);                 
                     lb.mixture[i][j][k].u = 0.0;
@@ -2090,7 +2201,7 @@ void main_setup() // Perfectly stirred reactor ---------------------------------
                 }
                 if (i==0 && j > 0.4*Ny && j < 0.6*Ny)
                 {
-                    lb.mixture[i][j][k].type = TYPE_I;
+                    lb.mixture[i][j][k].type = TYPE_I_C;
                     lb.mixture[i][j][k].temp = temp_amb;
                     lb.mixture[i][j][k].p = 1.0*units.p(Cantera::OneAtm); 
                     
@@ -2099,7 +2210,7 @@ void main_setup() // Perfectly stirred reactor ---------------------------------
                 }
                 if (i==Nx-1)
                 {
-                    lb.mixture[i][j][k].type = TYPE_O;
+                    lb.mixture[i][j][k].type = TYPE_O_E;
                 }
 
                 if (lb.mixture[i][j][k].type == TYPE_F)
@@ -2117,6 +2228,113 @@ void main_setup() // Perfectly stirred reactor ---------------------------------
     }
 
     lb.run(10000000,100);
+}
+
+#elif defined VORTEX_CONVECTION
+void main_setup()
+{
+    double NX = 200;
+    double NY = 200;
+    double NZ = 1;
+
+    LBM lb(NX, NY, NZ, 0.001);
+    int Nx = lb.get_Nx(); int Ny = lb.get_Ny(); int Nz = lb.get_Nz();
+
+    double gamma = 1.4;
+    double gas_const = 1.0;
+    double temp0 = 0.1;
+    lb.set_gamma(gamma);
+    lb.set_gasconst(gas_const);
+
+    double Mach_inf = 0.1;
+    double u_inf = Mach_inf * lb.get_soundspeed(temp0);
+    double b = 0.005;
+    double core_rad = 20;
+    double x_center = NX/2.0;
+    double y_center = NY/2.0;
+    
+    
+
+    // std::cout << "nu : " << NU << std::endl;
+    // std::cout << "nu (unit) : " << trans->viscosity() / gas->density() << std::endl;
+    // std::cout << "prandtl number : " << prandtl << std::endl;
+    // std::cout << "gas const : " << units.cp(Cantera::GasConstant/gas->meanMolecularWeight()) << std::endl;
+    // std::cout << "temperature : " << units.temp(gas->temperature()) << std::endl;
+    // std::cout << "gamma : " << gas->cp_mass()/gas->cv_mass() << std::endl;
+    // std::cout << "sound speed : " << units.u(gas->soundSpeed()) << std::endl;
+    // std::cout << "ux mean : " <<  u0 << std::endl;
+    // std::cout << "RT : " << units.cp(Cantera::GasConstant/gas->meanMolecularWeight())*units.temp(gas->temperature()) << std::endl;
+    
+    #pragma omp parallel for
+    for(int i = 0; i < Nx ; ++i){
+        for(int j = 0; j < Ny; ++j){
+            for(int k = 0; k < Nz; ++k){
+                // set periodic boundary condition
+                if ( k==0 || k==Nz-1 ) 
+                    lb.mixture[i][j][k].type = TYPE_P;
+                
+                // Left and Right Boundary Condition
+                if ( i==0 )
+                {
+                    lb.mixture[i][j][k].type = TYPE_O_E;
+                    lb.mixture[i][j][k].temp = temp0;
+                    lb.mixture[i][j][k].p = 0.1; 
+                }
+
+                // Left and Right Boundary Condition
+                if ( i==0 && (j > 0.4*Ny && j < 0.6*Ny))
+                {
+                    lb.mixture[i][j][k].type = TYPE_I_E;
+                    lb.mixture[i][j][k].temp = temp0;
+                    lb.mixture[i][j][k].p = 0.1; 
+                    lb.mixture[i][j][k].u = 0.01; 
+                }
+
+                // Left and Right Boundary Condition
+                if ( i==Nx-1)
+                {
+                    lb.mixture[i][j][k].type = TYPE_O_E;
+                    lb.mixture[i][j][k].temp = temp0;
+                    lb.mixture[i][j][k].p = 0.1; 
+                }
+
+                // Upper and Lower Boundary Condition
+                if ( j==0 || j==Ny-1 )
+                {
+                    lb.mixture[i][j][k].type = TYPE_O_E;
+                    lb.mixture[i][j][k].temp = temp0;
+                    lb.mixture[i][j][k].p = 0.1; 
+                }
+                
+                if (lb.mixture[i][j][k].type == TYPE_F)
+                {
+
+                    // double r_dist_2 = pow(i-x_center, 2) + pow(j-y_center, 2);
+                    // double core_rad_2 = pow(core_rad, 2);
+
+                    // lb.mixture[i][j][k].u = u_inf - b/(2*M_PI)*exp(0.5*(1.0-r_dist_2/core_rad_2))*(j-y_center);
+                    // lb.mixture[i][j][k].v = b/(2*M_PI)*exp(0.5*(1.0-r_dist_2/core_rad_2))*(i-x_center);
+                    // lb.mixture[i][j][k].w = 0.0;
+                    // lb.mixture[i][j][k].rho = pow( 1.0-(gamma-1.0)*b*b/(8.0*gamma*M_PI*M_PI) * exp(1.0-r_dist_2/core_rad_2) , 1.0/(gamma-1.0));
+                    // lb.mixture[i][j][k].temp = temp0;
+                    // lb.mixture[i][j][k].p = lb.mixture[i][j][k].rho*gas_const*lb.mixture[i][j][k].temp; 
+
+                    // -----------------------------------------------------------------------------------------------------------------------------
+
+                    double r_dist_2 = pow(i-x_center, 2) + pow(j-y_center, 2);
+                    double core_rad_2 = pow(core_rad, 2);
+
+                    lb.mixture[i][j][k].u = 0.0;
+                    lb.mixture[i][j][k].v = 0.0;
+                    lb.mixture[i][j][k].w = 0.0;
+                    lb.mixture[i][j][k].rho = 1.0 ;//+ 1.0e-4 * exp(-r_dist_2/core_rad_2);
+                    lb.mixture[i][j][k].temp = temp0;
+                    lb.mixture[i][j][k].p = lb.mixture[i][j][k].rho*gas_const*lb.mixture[i][j][k].temp;                   
+                }
+            }
+        }
+    }
+    lb.run(5000,100);
 }
 
 #endif
