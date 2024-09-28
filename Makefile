@@ -1,7 +1,7 @@
 # LBM Makefile
 
 TARGET= LBM
-CXX= g++
+CXX= g++-11
 CXXFLAGS=-Wall -O3 -ffast-math -fopenmp -march=native
 SRCDIR= ./src
 OBJDIR= ./obj
