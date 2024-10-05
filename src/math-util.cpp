@@ -122,17 +122,3 @@ double FD_limiterVanleer(double stc_n, double stc_c, double stc_p, double dx)
     double phi = limiterVanleer(theta);
     return -1.0 * phi * (stc_p - stc_c) / dx;
 }
-
-bool onlyOne_1(double a, double b, double c)
-{
-    // Check if exactly one number is 1 and the other two are 0
-    if ((a == 1 && b == 0 && c == 0) ||
-        (a == 0 && b == 1 && c == 0) ||
-        (a == 0 && b == 0 && c == 1) ||
-        (a == -1 && b ==  0 && c ==  0) ||
-        (a ==  0 && b == -1 && c ==  0) ||
-        (a ==  0 && b ==  0 && c == -1)) {
-        return true;
-    }
-    return false;
-}

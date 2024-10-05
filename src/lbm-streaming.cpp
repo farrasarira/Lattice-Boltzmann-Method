@@ -59,7 +59,7 @@ void LBM::Streaming()
                             mixture[i][j][k].g[l] = mixture[i][j][k].gpc[opposite[l]];
                             #endif
                         } 
-                        else if (mixture[i_nb][j_nb][k_nb].type==TYPE_O_E || mixture[i_nb][j_nb][k_nb].type==TYPE_O_C){ 
+                        else if (mixture[i_nb][j_nb][k_nb].type==TYPE_O){ 
                             // #ifndef MULTICOMP
                             // mixture[i][j][k].f[l] = mixture[i_nb][j_nb][k_nb].fpc[l];
                             // #else
@@ -71,7 +71,7 @@ void LBM::Streaming()
                             // mixture[i][j][k].g[l] = mixture[i_nb][j_nb][k_nb].gpc[l];          
                             // #endif 
                         }  
-                        else if (mixture[i_nb][j_nb][k_nb].type==TYPE_I_E || mixture[i_nb][j_nb][k_nb].type==TYPE_I_C)
+                        else if (mixture[i_nb][j_nb][k_nb].type==TYPE_I)
                         { 
                             // #ifndef MULTICOMP
                             // mixture[i][j][k].f[l] = mixture[i_nb][j_nb][k_nb].f[l];
@@ -84,7 +84,7 @@ void LBM::Streaming()
                             // mixture[i][j][k].g[l] = mixture[i_nb][j_nb][k_nb].f[l];
                             // #endif       
                         }                  
-                        else //if (mixture[i_nb][j_nb][k_nb].type==TYPE_F || mixture[i_nb][j_nb][k_nb].type==TYPE_P) //---- Periodic Boundary Condition --------------------
+                        else //---- Periodic Boundary Condition --------------------
                         {
                             // if (i_nb < 1) i_nb = Nx-2;
                             // else if(i_nb > Nx-2) i_nb = 1;
