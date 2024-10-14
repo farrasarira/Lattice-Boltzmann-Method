@@ -77,6 +77,10 @@
             #endif
 
             double temp = 1./3.;        // temperature
+
+            #ifdef MULTICOMP
+                double HRR = 0.0;
+            #endif
     };
 
     class SPECIES
@@ -95,8 +99,6 @@
                                      {0., 0., 0.},
                                      {0., 0., 0.}};
 
-            double omega;
-
     };
 
     class LBM
@@ -109,17 +111,19 @@
             int Ny = 1;
             int Nz = 1;
             int dt_sim = 1.0;
-            int nstep = 1000;
-            int tout = 100;
+            int step = 0;
 
+            #ifndef MULTICOMP
             double nu = 0.001;      // kinematic viscosity
             double gas_const = 1.0; // gas constant
             double gamma = 1.4;     // gamma (Cp/Cv)
             double Ra = 1.0;  // Reyleigh-Benard Constant
             double prtl = 0.5;      // prantdl number
-
+            #else
             size_t nSpecies = 0;
             std::vector<std::string> speciesName;
+            double permeability = 999999;  // Permeability
+            #endif
         
         public:
             MIXTURE *** mixture;
@@ -134,6 +138,11 @@
 
             // calculate moment
             void calculate_moment();
+            void calculate_moment_smoothing(){
+                calculate_moment();
+                Smoothing();
+                calculate_moment();
+            }
             double calculate_temp(double U, double rho, double Y[]);
 
             // calculate equlibrium density
@@ -147,6 +156,11 @@
 
             // initialize
             void Init();    // initialize equilibrium  
+            void Init_smooting(){
+                Init();  
+                Smoothing();
+                calculate_moment();
+            }
 
             // collision operator
             void Collide();
@@ -164,6 +178,10 @@
 
             // run simulation
             void run(int nstep, int tout);
+            void loop(int nstep, int tout);
+
+            // smoothing high gradient value
+            void Smoothing();
             
             // get private data
             int get_Nx(){return Nx;};
@@ -175,19 +193,65 @@
             int get_dx(){return dx;};
             int get_dy(){return dy;};
             int get_dz(){return dz;};
-            double get_nu(){return nu;};
+            double get_dtsim(){return dt_sim;};
+            double get_step(){return step;};
+            
+            #ifndef MULTICOMP
+                double get_nu(){return nu;};
+                double get_gasconst(){return gas_const;};
+                double get_gamma(){return gamma;};
+                double get_Ra(){return Ra;};
+                double get_prtl(){return prtl;};
+                size_t get_size(){
+                    size_t size_scalar_int      = 9 * sizeof(int);
+                    size_t size_scalar_double   = 5 * sizeof(double);
+                    size_t size_mixture         = Nx*Ny*Nz * sizeof(MIXTURE);
 
-            int get_nSpecies(){return nSpecies;};
-            std::vector<std::string> get_speciesName(){return speciesName;};
+                    size_t size_total = size_scalar_int + size_scalar_double + size_mixture;
+
+                    return size_total;
+                }
+
+            #elif defined MULTICOMP
+                int get_nSpecies(){return nSpecies;};
+                std::vector<std::string> get_speciesName(){return speciesName;};
+                double get_permeability(){return permeability;};
+                size_t get_size(){
+                    size_t size_scalar_int      = 9 * sizeof(int);
+                    size_t size_scalar_species  = sizeof(size_t) + nSpecies*sizeof(size_t);
+                    for(size_t a = 0; a < nSpecies; ++a)
+                        size_scalar_species += speciesName[a].size();
+                    size_scalar_species += sizeof(double); // permeability
+                    size_t size_mixture         = Nx*Ny*Nz * sizeof(MIXTURE);
+                    size_t size_species         = Nx*Ny*Nz*nSpecies * sizeof(SPECIES);
+
+                    size_t size_total = size_scalar_int + size_scalar_species + size_mixture + size_species;
+
+                    return size_total;
+                }
+            #endif
+
 
             // set private data
-            void set_nu(double nu){this->nu = nu;};
-            void set_gasconst(double gas_const){this->gas_const = gas_const;};
-            void set_prtl(double prtl){this->prtl = prtl;};
-            void set_gamma(double gamma){this->gamma = gamma;};
-            void set_Ra(double Ra){this->Ra = Ra;};
-            double get_soundspeed(double temp){return sqrt(this->gamma*this->gas_const*temp);};
-            double get_conduc_coeff(){return nu*1.0/prtl;};
+            void set_dx(int dx){this->dx = dx;};
+            void set_dy(int dy){this->dy = dy;};
+            void set_dz(int dz){this->dz = dz;};
+            void set_Nx(int Nx){this->Nx = Nx;};
+            void set_Ny(int Ny){this->Ny = Ny;};
+            void set_Nz(int Nz){this->Nz = Nz;};
+            void set_dtsim(int dt_sim){this->dt_sim = dt_sim;};
+            void set_step(int step){this->step = step;};
+            void set_permeability(double permeability){this->permeability = permeability;};
+
+            #ifndef MULTICOMP
+                void set_nu(double nu){this->nu = nu;};
+                void set_gasconst(double gas_const){this->gas_const = gas_const;};
+                void set_prtl(double prtl){this->prtl = prtl;};
+                void set_gamma(double gamma){this->gamma = gamma;};
+                void set_Ra(double Ra){this->Ra = Ra;};
+                double get_soundspeed(double temp){return sqrt(this->gamma*this->gas_const*temp);};
+                double get_conduc_coeff(){return nu*1.0/prtl;};
+            #endif
 
     };
 
