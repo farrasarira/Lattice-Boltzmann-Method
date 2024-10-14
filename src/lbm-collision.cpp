@@ -257,6 +257,11 @@ void LBM::Collide_Species()
                     #endif
 
                     // Viscosity -----------------------------------------------------------------------------------------------------------------------------                    
+                    std::fill(Y.begin(), Y.end(), 0.0);
+                    for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = (species[a][i][j][k].rho) / mixture[i][j][k].rho;
+                    gas->setState_TD(units.si_temp(mixture[i][j][k].temp), units.si_rho(mixture[i][j][k].rho));
+                    gas->setMassFractions(&Y[0]);
+                    
                     auto trans = sols[rank]->transport();
                     int ld = gas->nSpecies();
                     std::vector<double> d(ld * ld);
@@ -296,6 +301,7 @@ void LBM::Collide_Species()
                     // std::cout << visc_a[1] << " | " << units.mu(trans->viscosity()) << std::endl; 
 
                     // Diffusion ----------------------------------------------------------------------------------------------------------------------------
+                                        
                     double D_ab[nSpecies][nSpecies];
                     for(size_t a = 0; a < nSpecies; ++a)
                     {                       

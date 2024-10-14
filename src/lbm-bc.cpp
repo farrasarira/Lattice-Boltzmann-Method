@@ -424,6 +424,7 @@ void LBM::TMS_BC()
                             if(mixture[i_nb][j_nb][k_nb].type==TYPE_I && mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].type==TYPE_F){    
                                 interface_nodes[l] = true;
                                 n_d = n_d + 1;
+                                break;
                             }                            
                         }                        
 
@@ -434,14 +435,16 @@ void LBM::TMS_BC()
                         double vel_in[3] = {0.0};
                         double T_in = 0.0;
                         double rho_in = 0.0;
+                        double p_in = 0.0;
                         for (int l=0; l < npop; ++l){
-                            double q = 0.5;
                             if (interface_nodes[l] == true){
-                                vel_in[0] += (q*mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].u+mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].u)/(1.0+q);
-                                vel_in[1] += (q*mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].v+mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].v)/(1.0+q);
-                                vel_in[2] += (q*mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].w+mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].w)/(1.0+q);
-                                T_in += (q*mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].temp+mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].temp)/(1.0+q);
+                                vel_in[0] += mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].u;
+                                vel_in[1] += mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].v;
+                                vel_in[2] += mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].w;
+                                T_in += mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].temp;
                                 rho_in += mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].rho;
+                                p_in += mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].p;
+                                break;
                             }
                         }
 
@@ -449,7 +452,9 @@ void LBM::TMS_BC()
                         vel_in[1] = 1.0/n_d * vel_in[1];
                         vel_in[2] = 1.0/n_d * vel_in[2];
                         T_in = 1.0/n_d * T_in;
-                        rho_in = 1.0/n_d * rho_in;
+                        p_in = 1.0/n_d * p_in;
+                        // rho_in = 1.0/n_d * rho_in;
+                        rho_in = p_in / (gas_const * T_in);
 
                         // std::cout << i << " | " << vel_in[0] << " | " << T_in << std::endl;
                         calculate_feq_geq(f_in, g_in, rho_in, vel_in, T_in);
@@ -493,7 +498,6 @@ void LBM::TMS_BC()
                         double T_loc = internalEnergy / cv;                        
 
                         calculate_feq_geq(f_loc, g_loc, rho_loc, vel_loc, T_loc);
-
                         calculate_feq_geq(f_tgt, g_tgt, rho_loc, vel_in, T_in);
 
                         for (int l=0; l < npop; ++l){
@@ -515,6 +519,7 @@ void LBM::TMS_BC()
                                 mixture[i][j][k].g[l] = g_tgt[l] + mixture[i][j][k].g[l] - g_loc[l];
                                 #endif
                             }
+
                         }                  
 
                     } 
@@ -561,7 +566,7 @@ void LBM::TMS_BC()
                         double T_in = 0.0;
                         double rho_in = 0.0;
                         double rhoa_in[nSpecies] = {0.0};
-                        double P_in = 0.0;
+                        double p_in = 0.0;
                         for (int l=0; l < npop; ++l){
                             if (interface_nodes[l] == true){
                                 vel_in[0] = mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].u;
@@ -572,11 +577,8 @@ void LBM::TMS_BC()
                                 for(size_t a = 0; a < nSpecies; ++a)
                                     rhoa_in[a] = species[a][(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].rho;
                                 
-                                P_in = mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].p;
-                                
+                                p_in = mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].p;
                                 break;
-
-
                             }
                         }
 
@@ -584,10 +586,10 @@ void LBM::TMS_BC()
                         auto gas = sols[rank]->thermo();   
                         std::vector <double> Y (gas->nSpecies());
                         for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = rhoa_in[a] / rho_in;
-                        gas->setState_TP(units.si_temp(T_in), units.si_p(P_in));
-                        gas->setMassFractions(&Y[0]);        
+                        gas->setState_TP(units.si_temp(T_in), units.si_p(p_in));
+                        gas->setMassFractions(&Y[0]);   
 
-                        rho_in = units.rho(gas->density());  
+                        rho_in = units.rho(gas->density());
                         for(size_t a = 0; a < nSpecies; ++a) rhoa_in[a] = Y[gas->speciesIndex(speciesName[a])] * rho_in;
 
 
@@ -660,9 +662,7 @@ void LBM::TMS_BC()
                         }
 
                         #ifndef ISOTHERM
-                        double internalEnergy=rhoe_loc/rho_loc; //- 0.5*v_sqr(vel_loc[0], vel_loc[1], vel_loc[2]); 
-                        for(size_t a = 0; a < nSpecies; ++a)
-                            internalEnergy = internalEnergy - 0.5*rhoa_loc[a]/rho_loc*v_sqr(vela_loc[a][0], vela_loc[a][1], vela_loc[a][2]);                    
+                        double internalEnergy=rhoe_loc/rho_loc - 0.5*v_sqr(vel_loc[0], vel_loc[1], vel_loc[2]);                     
                         double T_loc = calculate_temp(internalEnergy, rho_loc, rhoa_loc);
                         #else
                         double T_loc = T_in;
@@ -682,7 +682,7 @@ void LBM::TMS_BC()
                                     species[a][i][j][k].f[l] = fa_tgt[a][l] + fa_in[a][l] - fa_loc[a][l];
 
                                 #ifndef ISOTHERM
-                                // mixture[i][j][k].g[l] = 2.0*g_in[l] - g_loc[l];
+                                // mixture[i][j][k].g[l] =2.0*g_in[l] - g_loc[l];
                                 mixture[i][j][k].g[l] = g_tgt[l] + g_in[l] - g_loc[l];
                                 #endif
                             }
@@ -741,6 +741,7 @@ void LBM::TMS_BC()
                         double vel_out[3] = {0.0};
                         double T_out = 0.0;
                         double rho_out = 0.0;
+                        double p_out = 0.0;
                         for (int l=0; l < npop; ++l){
                             if (interface_nodes[l] == true){
                                 vel_out[0]  = mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].u;
@@ -748,9 +749,12 @@ void LBM::TMS_BC()
                                 vel_out[2]  = mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].w;
                                 T_out       = mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].temp;
                                 rho_out     = mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].rho;
+                                p_out = mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].p;
                                 break;
                             }
                         }
+
+                        rho_out = p_out / (gas_const * T_out);
 
                         // std::cout << i << " | " << vel_in[0] << " | " << T_in << std::endl;
                         calculate_feq_geq(f_out, g_out, rho_out, vel_out, T_out);
@@ -858,7 +862,9 @@ void LBM::TMS_BC()
                         double vel_out[3] = {0.0};
                         double T_out = 0.0;
                         double rhoa_out[nSpecies] = {0.0};
-                        double vela_out [nSpecies][3] = {0.0};
+                        double vela_out[nSpecies][3] = {0.0};
+                        double p_out = 0.0;
+
                         for (int l=0; l < npop; ++l){
                             if (interface_nodes[l] == true){
                                 vel_out[0] = mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].u;
@@ -867,18 +873,30 @@ void LBM::TMS_BC()
                                 T_out      = mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].temp;
                                 rho_out    = mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].rho;
                                 for(size_t a = 0; a < nSpecies; ++a){
-                                    rhoa_out[a]     = species[a][(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].rho;
-                                    vela_out[a][0]  = species[a][(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].u;
-                                    vela_out[a][1]  = species[a][(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].v;
-                                    vela_out[a][2]  = species[a][(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].w;
+                                    rhoa_out[a]    = species[a][(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].rho;
+                                    vela_out[a][0] = species[a][(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].u;
+                                    vela_out[a][1] = species[a][(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].v;
+                                    vela_out[a][2] = species[a][(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].w;
                                 }
+                                
+                                p_out = mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].p;
                                 break;
                             }
                         }
 
+                        int rank = omp_get_thread_num();
+                        auto gas = sols[rank]->thermo();   
+                        std::vector <double> Y (gas->nSpecies());
+                        for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = rhoa_out[a] / rho_out;
+                        gas->setState_TP(units.si_temp(T_out), units.si_p(p_out));
+                        gas->setMassFractions(&Y[0]);   
+
+                        rho_out = units.rho(gas->density());
+                        for(size_t a = 0; a < nSpecies; ++a) rhoa_out[a] = Y[gas->speciesIndex(speciesName[a])] * rho_out;
+
                         // std::cout << i << " | " << vel_in[0] << " | " << T_in << std::endl;
-                        // calculate_feq_geq(fa_out, g_out, rho_out, rhoa_out, vel_out, vela_out, T_out);
                         calculate_feq_geq(fa_out, g_out, rho_out, rhoa_out, vel_out, vela_out, T_out);
+                        // calculate_feq_geq(fa_out, g_out, rho_out, rhoa_out, vel_out, T_out);
 
                         // // step 2: calculate f_loc, g_loc, and fa_loc (local distribution function)
                         double rho_loc = 0.0;
@@ -945,14 +963,17 @@ void LBM::TMS_BC()
                         }
 
                         #ifndef ISOTHERM
-                        double internalEnergy=rhoe_loc/rho_loc;// - 0.5*v_sqr(vel_loc[0], vel_loc[1], vel_loc[2]);   
-                        for(size_t a = 0; a < nSpecies; ++a)
-                            internalEnergy = internalEnergy - 0.5*rhoa_loc[a]/rho_loc*v_sqr(vela_loc[a][0], vela_loc[a][1], vela_loc[a][2]);   
+                        double internalEnergy=rhoe_loc/rho_loc;// - 0.5*v_sqr(vel_loc[0], vel_loc[1], vel_loc[2]); 
+                        for (size_t a = 0; a < nSpecies; ++a){
+                            internalEnergy = internalEnergy - 0.5 * rhoa_loc[a]/rho_loc * v_sqr(vela_loc[a][0], vela_loc[a][1], vela_loc[a][2]);
+                        }     
+                        // double internalEnergy=rhoe_loc/rho_loc - 0.5*v_sqr(vel_loc[0], vel_loc[1], vel_loc[2]); 
                         double T_loc = calculate_temp(internalEnergy, rho_loc, rhoa_loc);
                         #else
                         double T_loc = T_out;
                         #endif
-                        calculate_feq_geq(fa_loc, g_loc, rho_loc, rhoa_loc, vel_loc, vela_loc, T_out);
+                        // calculate_feq_geq(fa_loc, g_loc, rho_loc, rhoa_loc, vel_loc, vela_loc, T_out);
+                        calculate_feq_geq(fa_loc, g_loc, rho_loc, rhoa_loc, vel_loc, vela_loc, T_loc);
 
                         for (int l=0; l < npop; ++l){
                             i_nb = i - cx[l];
@@ -965,17 +986,21 @@ void LBM::TMS_BC()
                             if (mixture[i_nb][j_nb][k_nb].type==TYPE_O){
                                 for(size_t a = 0; a < nSpecies; ++a)
                                     species[a][i][j][k].f[l] = 2*fa_out[a][l] - fa_loc[a][l];
+                                    // species[a][i][j][k].f[l] = fa_out[a][l];
 
                                 #ifndef ISOTHERM
                                 mixture[i][j][k].g[l] = 2*g_out[l] - g_loc[l];
+                                // mixture[i][j][k].g[l] = g_out[l];
                                 #endif
                             }
                             else{
                                 for(size_t a = 0; a < nSpecies; ++a)
                                     species[a][i][j][k].f[l] = fa_out[a][l] + species[a][i][j][k].f[l] - fa_loc[a][l];
+                                    // species[a][i][j][k].f[l] = fa_out[a][l];
 
                                 #ifndef ISOTHERM
                                 mixture[i][j][k].g[l] = g_out[l] + mixture[i][j][k].g[l] - g_loc[l];
+                                // mixture[i][j][k].g[l] = g_out[l];
                                 #endif
                             }
                         }                  

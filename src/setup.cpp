@@ -1789,7 +1789,11 @@ void main_setup() // 2D Opposed Jet --------------------------------------------
 
                 // Upper and Lower Boundary Condition
                 if ( j==0 || j==Ny-1 )
+                {
                     lb.mixture[i][j][k].type = TYPE_O;
+                    lb.mixture[i][j][k].temp = 0.1;
+                    lb.mixture[i][j][k].p = 0.1; 
+                }
 
                 // Left Inlet Boundary Condition
                 if ( i==0 && j > NY/2 - jet_width && j < NY/2 + jet_width ) 
@@ -1907,7 +1911,7 @@ void main_setup() // 2D Opposed Jet --------------------------------------------
 
                     lb.species[0][i][j][k].X = 0.10;
                     lb.species[1][i][j][k].X = 0.85;
-                    lb.species[2][i][j][k].X = 0.0001;
+                    lb.species[2][i][j][k].X = 0.001;
                     lb.species[3][i][j][k].X = 0.05;
                 }
                 // Right Inlet Boundary Condition
@@ -1918,10 +1922,10 @@ void main_setup() // 2D Opposed Jet --------------------------------------------
                     lb.mixture[i][j][k].temp = units.temp(temp0);
                     lb.mixture[i][j][k].p = units.p(press0); 
 
-                    lb.species[0][i][j][k].X = 0.0001;
+                    lb.species[0][i][j][k].X = 0.001;
                     lb.species[1][i][j][k].X = 0.90;
                     lb.species[2][i][j][k].X = 0.10;
-                    lb.species[3][i][j][k].X = 0.0001;
+                    lb.species[3][i][j][k].X = 0.001;
                 }
                 
                 if (lb.mixture[i][j][k].type == TYPE_F)
@@ -2006,15 +2010,11 @@ void main_setup() // Perfectly stirred reactor ---------------------------------
 #elif defined FLAME_SPEED
 void main_setup() // Perfectly stirred reactor ------------------------------------------------------------------------------------------
 {
-    int NX = 10000; 
+    int NX = 4000; 
     int NY = 1; 
     int NZ = 1;
     
-    units.set_m_kg_s(1e-5, 1e-9);
-
-    double temp_u = units.temp(300.0); // [K]
-    double smoothn = 0.07;
-    double minim = 1e-15;
+    units.set_m_kg_s(5.0e-6, 5.0e-10 ); //6.4e-6, 6.4e-10 (0.75-1.0)
 
     auto sol = Cantera::newSolution("h2o2.yaml", "ohmech");
     auto gas = sol->thermo();
@@ -2023,6 +2023,11 @@ void main_setup() // Perfectly stirred reactor ---------------------------------
 
     LBM lb(NX, NY, NZ, species);
     int Nx = lb.get_Nx(); int Ny = lb.get_Ny(); int Nz = lb.get_Nz();
+
+    double temp_u = units.temp(300.0); // [K]
+    double smoothn = 0.02;
+    double minim = 1e-13;
+    double midpoint = 0.55*Nx;
 
     #pragma omp parallel for
     for(int i = 0; i < Nx ; ++i)
@@ -2041,28 +2046,17 @@ void main_setup() // Perfectly stirred reactor ---------------------------------
                 }
                 if (i==Nx-1)
                 {
-                    lb.mixture[i][j][k].type = TYPE_O;
+                    lb.mixture[i][j][k].type = TYPE_A;
+                    lb.mixture[i][j][k].p = 1.0*units.p(Cantera::OneAtm);                 
                 }
 
-                if (lb.mixture[i][j][k].type == TYPE_F || lb.mixture[i][j][k].type == TYPE_O)
+                if (lb.mixture[i][j][k].type == TYPE_F)
                 {
-                    lb.mixture[i][j][k].p = 1.0*units.p(Cantera::OneAtm);                 
                     lb.mixture[i][j][k].u = 0.0;
                     lb.mixture[i][j][k].v = 0.0;
                     lb.mixture[i][j][k].w = 0.0; 
 
-                    double temp_b = units.temp(2387.637); // [K]
-                    lb.species[gas->speciesIndex("H2")][i][j][k].X = smooth(0.29586, 0.014565, i, 0.8*Nx, smoothn);
-                    lb.species[gas->speciesIndex("H")][i][j][k].X = smooth(minim, 0.00181, i, 0.8*Nx, smoothn);
-                    lb.species[gas->speciesIndex("O")][i][j][k].X = smooth(minim, 0.00060738, i, 0.8*Nx, smoothn);
-                    lb.species[gas->speciesIndex("O2")][i][j][k].X = smooth(0.14793, 0.0056094, i, 0.8*Nx, smoothn);
-                    lb.species[gas->speciesIndex("OH")][i][j][k].X = smooth(minim, 0.0072848, i, 0.8*Nx, smoothn);
-                    lb.species[gas->speciesIndex("H2O")][i][j][k].X = smooth(minim, 0.32437, i, 0.8*Nx, smoothn);
-                    lb.species[gas->speciesIndex("HO2")][i][j][k].X = smooth(minim, 1.2571e-06, i, 0.8*Nx, smoothn);
-                    lb.species[gas->speciesIndex("H2O2")][i][j][k].X = smooth(minim, 1.3391e-07, i, 0.8*Nx, smoothn);
-                    lb.species[gas->speciesIndex("N2")][i][j][k].X = smooth(0.55621, 0.64575, i, 0.8*Nx, smoothn);
-                    
-                    
+                    // phi = 0.5
                     // double temp_b = units.temp(1646.2); // [K]
                     // lb.species[gas->speciesIndex("H2")][i][j][k].X = smooth(0.17361,  6.9363e-06, i, 0.8*Nx, smoothn);
                     // lb.species[gas->speciesIndex("H")][i][j][k].X = smooth(minim, 2.3043e-07, i, 0.8*Nx, smoothn);
@@ -2073,9 +2067,94 @@ void main_setup() // Perfectly stirred reactor ---------------------------------
                     // lb.species[gas->speciesIndex("HO2")][i][j][k].X = smooth(minim, 3.8302e-07, i, 0.8*Nx, smoothn);
                     // lb.species[gas->speciesIndex("H2O2")][i][j][k].X = smooth(minim, 2.6553e-08, i, 0.8*Nx, smoothn);
                     // lb.species[gas->speciesIndex("N2")][i][j][k].X = smooth(0.65278, 0.71477, i, 0.8*Nx, smoothn);
+
+                    // phi = 0.75
+                    // double temp_b = units.temp(2101.8); // [K]
+                    // lb.species[gas->speciesIndex("H2")][i][j][k].X      = smooth(0.23962, 0.00076445    , i, 0.8*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("H")][i][j][k].X       = smooth(minim  , 8.7175e-05    , i, 0.8*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("O")][i][j][k].X       = smooth(minim  , 0.00029721    , i, 0.8*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("O2")][i][j][k].X      = smooth(0.15974, 0.044642      , i, 0.8*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("OH")][i][j][k].X      = smooth(minim  , 0.0036599     , i, 0.8*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("H2O")][i][j][k].X     = smooth(minim  , 0.26918       , i, 0.8*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("HO2")][i][j][k].X     = smooth(minim  , 2.159e-06     , i, 0.8*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("H2O2")][i][j][k].X    = smooth(minim  , 1.4662e-07    , i, 0.8*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("N2")][i][j][k].X      = smooth(0.60064, 0.68136       , i, 0.8*Nx, smoothn);
+
+                    // phi = 1.0
+                    // double temp_b = units.temp(2387.637); // [K]
+                    // lb.species[gas->speciesIndex("H2")][i][j][k].X = smooth(0.29586, 0.014565, i, 0.7*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("H")][i][j][k].X = smooth(minim, 0.00181, i, 0.7*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("O")][i][j][k].X = smooth(minim, 0.00060738, i, 0.7*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("O2")][i][j][k].X = smooth(0.14793, 0.0056094, i, 0.7*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("OH")][i][j][k].X = smooth(minim, 0.0072848, i, 0.7*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("H2O")][i][j][k].X = smooth(minim, 0.32437, i, 0.7*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("HO2")][i][j][k].X = smooth(minim, 1.2571e-06, i, 0.7*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("H2O2")][i][j][k].X = smooth(minim, 1.3391e-07, i, 0.7*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("N2")][i][j][k].X = smooth(0.55621, 0.64575, i, 0.7*Nx, smoothn);
+                    
+                    // phi = 1.25
+                    // double temp_b = units.temp(2348.7); // [K]
+                    // lb.species[gas->speciesIndex("H2")][i][j][k].X = smooth(0.34435, 0.079375, i, 0.6*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("H")][i][j][k].X = smooth(minim, 0.0034937, i, 0.6*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("O")][i][j][k].X = smooth(minim, 7.099e-05, i, 0.6*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("O2")][i][j][k].X = smooth(0.13774, 0.00011754, i, 0.6*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("OH")][i][j][k].X = smooth(minim, 0.0023875, i, 0.6*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("H2O")][i][j][k].X = smooth(minim,  0.3158, i, 0.6*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("HO2")][i][j][k].X = smooth(minim, 6.1036e-08, i, 0.6*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("H2O2")][i][j][k].X = smooth(minim, 1.7195e-08, i, 0.6*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("N2")][i][j][k].X = smooth(0.51791, 0.59876, i, 0.6*Nx, smoothn);
+
+                    // phi = 1.5
+                    // double temp_b = units.temp(2246.4); // [K]
+                    // lb.species[gas->speciesIndex("H2")][i][j][k].X = smooth(0.3866, 0.14671 , i, 0.6*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("H")][i][j][k].X = smooth(minim, 0.0027918, i, 0.6*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("O")][i][j][k].X = smooth(minim, 1.0969e-05, i, 0.6*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("O2")][i][j][k].X = smooth(0.12887, 9.2513e-06, i, 0.6*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("OH")][i][j][k].X = smooth(minim, 0.00083597, i, 0.6*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("H2O")][i][j][k].X = smooth(minim,  0.29445, i, 0.6*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("HO2")][i][j][k].X = smooth(minim, 6.3987e-09, i, 0.6*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("H2O2")][i][j][k].X = smooth(minim, 3.4716e-09, i, 0.6*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("N2")][i][j][k].X = smooth(0.48454, 0.55519, i, 0.6*Nx, smoothn);
+                    
+                    // phi = 1.75
+                    // double temp_b = units.temp(2149.6); // [K]
+                    // lb.species[gas->speciesIndex("H2")][i][j][k].X = smooth(0.42373, 0.20559 , i, 0.8*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("H")][i][j][k].X = smooth(minim, 0.0019092, i, 0.8*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("O")][i][j][k].X = smooth(minim, 2.1507e-06, i, 0.8*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("O2")][i][j][k].X = smooth(0.12107, 1.2201e-06, i, 0.8*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("OH")][i][j][k].X = smooth(minim, 0.00032887, i, 0.8*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("H2O")][i][j][k].X = smooth(minim,  0.27484, i, 0.8*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("HO2")][i][j][k].X = smooth(minim, 9.7833e-10, i, 0.8*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("H2O2")][i][j][k].X = smooth(minim, 9.0087e-10, i, 0.8*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("N2")][i][j][k].X = smooth(0.45521, 0.51733, i, 0.8*Nx, smoothn);
+                    
+                    // phi = 2.0
+                    // double temp_b = units.temp(2060.4); // [K]
+                    // lb.species[gas->speciesIndex("H2")][i][j][k].X = smooth(0.45662, 0.25701 , i, 0.8*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("H")][i][j][k].X = smooth(minim, 0.0012315, i, 0.8*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("O")][i][j][k].X = smooth(minim, 4.7242e-07, i, 0.8*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("O2")][i][j][k].X = smooth(0.11416, 2.0277e-07, i, 0.8*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("OH")][i][j][k].X = smooth(minim, 0.00013708, i, 0.8*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("H2O")][i][j][k].X = smooth(minim,  0.25742, i, 0.8*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("HO2")][i][j][k].X = smooth(minim, 1.7805e-10, i, 0.8*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("H2O2")][i][j][k].X = smooth(minim, 2.6322e-10, i, 0.8*Nx, smoothn);
+                    // lb.species[gas->speciesIndex("N2")][i][j][k].X = smooth(0.42922, 0.4842, i, 0.8*Nx, smoothn);
+
+                    // phi = 2.25
+                    double temp_b = units.temp(1978.6); // [K]
+                    lb.species[gas->speciesIndex("H2")][i][j][k].X = smooth(0.48596, 0.30218, i, midpoint, smoothn);
+                    lb.species[gas->speciesIndex("H")][i][j][k].X = smooth(minim, 0.00077213, i, midpoint, smoothn);
+                    lb.species[gas->speciesIndex("O")][i][j][k].X = smooth(minim, 1.112e-07, i, midpoint, smoothn);
+                    lb.species[gas->speciesIndex("O2")][i][j][k].X = smooth(0.10799, 3.8523e-08, i, midpoint, smoothn);
+                    lb.species[gas->speciesIndex("OH")][i][j][k].X = smooth(minim, 5.9246e-05, i, midpoint, smoothn);
+                    lb.species[gas->speciesIndex("H2O")][i][j][k].X = smooth(minim,  0.24197, i, midpoint, smoothn);
+                    lb.species[gas->speciesIndex("HO2")][i][j][k].X = smooth(minim, 3.5935e-11, i, midpoint, smoothn);
+                    lb.species[gas->speciesIndex("H2O2")][i][j][k].X = smooth(minim, 8.265e-11, i, midpoint, smoothn);
+                    lb.species[gas->speciesIndex("N2")][i][j][k].X = smooth(0.40605, 0.45502, i, midpoint, smoothn);
                     
                     
-                    lb.mixture[i][j][k].temp = smooth(temp_u, temp_b, i, 0.8*Nx, smoothn); 
+                    lb.mixture[i][j][k].p = smooth(1.0*units.p(Cantera::OneAtm), 1.2*units.p(Cantera::OneAtm), i, midpoint, smoothn); ;//1.0*units.p(Cantera::OneAtm);                 
+                    lb.mixture[i][j][k].temp = smooth(temp_u, temp_b, i, midpoint, smoothn); 
 
 
 
@@ -2084,7 +2163,7 @@ void main_setup() // Perfectly stirred reactor ---------------------------------
         }
     }
 
-    lb.run(10000000,1000);
+    lb.run(10000000000,1000);
 }
 
 
