@@ -3,6 +3,7 @@
 #include "lbm.hpp"
 #include "math_util.hpp"
 #include "units.hpp"
+#include "restart_file.hpp"
 #include <omp.h>
 #include <numeric>
 #include <vector>
@@ -11,6 +12,7 @@
     std::vector<std::shared_ptr<Cantera::Solution>> sols;
 #endif
 
+#ifndef MULTICOMP
 LBM::LBM(int Nx, int Ny, int Nz, double nu)
 {
     // Number lattice used in simulation
@@ -30,6 +32,7 @@ LBM::LBM(int Nx, int Ny, int Nz, double nu)
         }
     }
 }
+#endif
 
 #ifdef MULTICOMP
 LBM::LBM(int Nx, int Ny, int Nz, std::vector<std::string> species)
@@ -72,8 +75,10 @@ LBM::LBM(int Nx, int Ny, int Nz, std::vector<std::string> species)
     std::cout << "nThreads : " << nThreads << std::endl;
     for(int i = 0; i < nThreads; ++i)
     {
-        auto sol = Cantera::newSolution("gri30.yaml", "gri30","mixture-averaged");
+        // auto sol = Cantera::newSolution("gri30.yaml", "gri30","mixture-averaged");
+        auto sol = Cantera::newSolution("h2o2.yaml", "ohmech");
         // auto sol = Cantera::newSolution("gri30.yaml", "gri30", "multicomponent");
+        // auto sol = Cantera::newSolution("./src/reaction-mech/one-step.yaml", "FakeGas");
         sols.push_back(sol);
     }
 
@@ -83,25 +88,28 @@ LBM::LBM(int Nx, int Ny, int Nz, std::vector<std::string> species)
 
 void LBM::run(int nstep, int tout)
 { 
-    this->nstep = nstep;
-    this->tout = tout;
-
     std::cout << "  Setup Done" << std::endl;
 
     // initialize the distribution function 
     std::cout << "  Initialization ..." << std::endl;
+    step = 0;
     Init();  
     std::cout << "  Initialization Done" << std::endl;
     
-    // initialize time step variable
-    int step = 0;
-
     // Save the macroscopic at t=0
     OutputVTK(step, this);
     OutputKeEns(step, this);
 
     // Simulation loop
-    for (step = 1; step <= nstep; ++step)
+    loop(nstep, tout);
+    
+}
+
+void LBM::loop(int nstep, int tout)
+{ 
+
+    // Simulation loop
+    for (int step = this->step+1; step <= nstep; ++step)
     {
         #ifdef MULTICOMP
         Collide_Species();  // collide species distribution function
@@ -114,15 +122,18 @@ void LBM::run(int nstep, int tout)
         // std::cout << "  Streaming Done" << std::endl;
         TMS_BC();
         // std::cout << "  Apply BC Done" << std::endl;
+        // fill_BC();
+        // std::cout << "  Fill BC Done" << std::endl;
         calculate_moment(); // calculate moment
         // std::cout << "  Calculate Moment Done" << std::endl;
         
 
-        if (step % tout == 0)
-        {
-            OutputVTK(step, this); // Save the macroscopic quantity
+        if (step % tout == 0){
+            OutputVTK(step, this);      // Save the macroscopic quantity
             OutputKeEns(step, this);
         }
+        if (step % (1*tout) == 0)
+            write_restart(step, this);
 
     }
     

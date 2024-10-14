@@ -25,3 +25,5 @@ clean:
 	rm -rf $(TARGET) $(OBJECT) $(OUTPUT) $(OBJDIR) $(RESTART)
 output_clean:
 	rm -rf $(OUTPUT)
+restart_clean:
+	rm -rf *.dat

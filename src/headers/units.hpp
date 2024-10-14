@@ -99,6 +99,10 @@
         float p(const float si_p) const { return si_p*(m*sq(s))/kg; } // pressure 
         // float bin_diff(const float si_bin_diff) const { return si_bin_diff * s / (m*m); } // pressure 
         // float diff_coeff(const float si_dif_coeff) const { return si_dif_coeff*s/sq(m); } // diffusion coefficient si_nu = nu*[m^2/s]
+        float permeability(const float si_K) const { return si_K/sq(m); } // permeability K
+        float HRR(const float si_HRR) const { return si_HRR / (kg/(m*cb(s))); } // Heat Relese Rate 
+
+
         
         // // the following methods convert simulation units into SI units (have to be called after set_m_kg_s(...);)
         float si_x(const int x) const { return (float)x*m; } // length si_x = x*[m]
@@ -121,6 +125,8 @@
         // float si_F(const float F) const { return F*kg*m/sq(s); } // force si_F = F*[kg*m/s^2]
         // float si_T(const float T) const { return T*kg*sq(m)/sq(s); } // torque si_T = T*[kg*m^2/s^2]
         // float si_sigma(const float sigma) const { return sigma*kg/sq(s); } // surface tension si_sigma = sigma*[kg/s^2]
+        float si_HRR(const float HRR) const { return HRR * (kg/(m*cb(s))); } // Heat Relese Rate  
+
 
         // // other conversions in simulation units (can be called before set_m_kg_s(...);)
         // float Re(const float si_Re) const { return si_Re; } // Reynolds number Re = x*u/nu = [1] no unit
