@@ -187,67 +187,68 @@ void OutputVTK(int &nout, LBM *lbm)
 
 void OutputKeEns(int &step, LBM *lbm)
 {	
-	LBM lb = *lbm;
-	int Nx = lb.get_Nx();
-    int Ny = lb.get_Ny();
-    int Nz = lb.get_Nz();
-	double e_kinetic = 0;
-	double enstro = 0;
-	double uu = 0 ;
-	double vort = 0;
-	double toten = 0.0; // Total Energy
+	// LBM lb = *lbm;
+	// int Nx = lb.get_Nx();
+    // int Ny = lb.get_Ny();
+    // int Nz = lb.get_Nz();
+	// double e_kinetic = 0;
+	// double enstro = 0;
+	// double uu = 0 ;
+	// double vort = 0;
+	// double toten = 0.0; // Total Energy
 
-	for (int i = 0; i < Nx; i++)
-	{
-		for (int j = 0; j < Ny; j++)
-		{
-			for (int k = 0; k < Nz; k++)
-			{
-				if (lb.mixture[i][j][k].type == TYPE_F)
-				{ 
-					uu = lb.mixture[i][j][k].u*lb.mixture[i][j][k].u + lb.mixture[i][j][k].v*lb.mixture[i][j][k].v + lb.mixture[i][j][k].w*lb.mixture[i][j][k].w;
-					e_kinetic = e_kinetic + lb.mixture[i][j][k].rho * uu;
+	// for (int i = 0; i < Nx; i++)
+	// {
+	// 	for (int j = 0; j < Ny; j++)
+	// 	{
+	// 		for (int k = 0; k < Nz; k++)
+	// 		{
+	// 			if (lb.mixture[i][j][k].type == TYPE_F)
+	// 			{ 
+	// 				uu = lb.mixture[i][j][k].u*lb.mixture[i][j][k].u + lb.mixture[i][j][k].v*lb.mixture[i][j][k].v + lb.mixture[i][j][k].w*lb.mixture[i][j][k].w;
+	// 				e_kinetic = e_kinetic + lb.mixture[i][j][k].rho * uu;
 					
-					int i_a = i + 1;
-					int i_b = i - 1;
-					int j_a = j + 1;
-					int j_b = j - 1;
-					int k_a = k + 1;
-					int k_b = k - 1;
+	// 				int i_a = i + 1;
+	// 				int i_b = i - 1;
+	// 				int j_a = j + 1;
+	// 				int j_b = j - 1;
+	// 				int k_a = k + 1;
+	// 				int k_b = k - 1;
 
-					if (i_b < 1) i_b = Nx-2;
-					else if(i_a > Nx-2) i_a = 1;
+	// 				if (i_b < 1) i_b = Nx-2;
+	// 				else if(i_a > Nx-2) i_a = 1;
 
-					if (j_b < 1) j_b = Ny-2;
-					else if(j_a > Ny-2) j_a = 1;
+	// 				if (j_b < 1) j_b = Ny-2;
+	// 				else if(j_a > Ny-2) j_a = 1;
 
-					if (k_b < 1) k_b = Nz-2;
-					else if(k_a > Nz-2) k_a = 1;
+	// 				if (k_b < 1) k_b = Nz-2;
+	// 				else if(k_a > Nz-2) k_a = 1;
 					
 
-					double uy = (lb.mixture[i][j_a][k].u - lb.mixture[i][j_b][k].u) / 2;
-					double uz = (lb.mixture[i][j][k_a].u - lb.mixture[i][j][k_b].u) / 2;
+	// 				double uy = (lb.mixture[i][j_a][k].u - lb.mixture[i][j_b][k].u) / 2;
+	// 				double uz = (lb.mixture[i][j][k_a].u - lb.mixture[i][j][k_b].u) / 2;
 					
-					double vx = (lb.mixture[i_a][j][k].v - lb.mixture[i_b][j][k].v) / 2;
-					double vz = (lb.mixture[i][j][k_a].v - lb.mixture[i][j][k_b].v) / 2;
+	// 				double vx = (lb.mixture[i_a][j][k].v - lb.mixture[i_b][j][k].v) / 2;
+	// 				double vz = (lb.mixture[i][j][k_a].v - lb.mixture[i][j][k_b].v) / 2;
 
-					double wx = (lb.mixture[i_a][j][k].w - lb.mixture[i_b][j][k].w) / 2;
-					double wy = (lb.mixture[i][j_a][k].w - lb.mixture[i][j_b][k].w) / 2;
+	// 				double wx = (lb.mixture[i_a][j][k].w - lb.mixture[i_b][j][k].w) / 2;
+	// 				double wy = (lb.mixture[i][j_a][k].w - lb.mixture[i][j_b][k].w) / 2;
 
-					vort = (wy-vz)*(wy-vz) + (uz-wx)*(uz-wx) + (vx-uy)*(vx-uy);
-					enstro = enstro + lb.mixture[i][j][k].rho * vort;
+	// 				vort = (wy-vz)*(wy-vz) + (uz-wx)*(uz-wx) + (vx-uy)*(vx-uy);
+	// 				enstro = enstro + lb.mixture[i][j][k].rho * vort;
 
-					#ifndef ISOTHERM
-					toten = toten + lb.mixture[i][j][k].rhoe;
-					#endif
-				}
-			}
-		}
-	}
+	// 				#ifndef ISOTHERM
+	// 				toten = toten + lb.mixture[i][j][k].rhoe;
+	// 				#endif
+	// 			}
+	// 		}
+	// 	}
+	// }
 	
 	std::cout << step << ",";
-	std::cout << e_kinetic << ",";
-	std::cout << enstro << std::endl;
+	// std::cout << e_kinetic << ",";
+	// std::cout << enstro ;
+	std::cout << std::endl;
 
 }
 
