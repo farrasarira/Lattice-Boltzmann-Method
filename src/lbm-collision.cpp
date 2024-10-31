@@ -228,7 +228,7 @@ void LBM::Collide_Species()
                     std::vector <double> Y (gas->nSpecies());
                     for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = (species[a][i][j][k].rho) / mixture[i][j][k].rho;
                     gas->setState_TD(units.si_temp(mixture[i][j][k].temp), units.si_rho(mixture[i][j][k].rho));
-                    gas->setMassFractions(&Y[0]);      
+                    gas->setMassFractions(&Y[0]);   
                                         
                     // Reaction ---------------------------------------------------------------------------------------------------------------------------
                     #ifdef REACTION

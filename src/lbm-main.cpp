@@ -76,9 +76,10 @@ LBM::LBM(int Nx, int Ny, int Nz, std::vector<std::string> species)
     for(int i = 0; i < nThreads; ++i)
     {
         // auto sol = Cantera::newSolution("gri30.yaml", "gri30","mixture-averaged");
-        auto sol = Cantera::newSolution("h2o2.yaml", "ohmech");
+        // auto sol = Cantera::newSolution("h2o2.yaml", "ohmech");
         // auto sol = Cantera::newSolution("gri30.yaml", "gri30", "multicomponent");
         // auto sol = Cantera::newSolution("./src/reaction-mech/one-step.yaml", "FakeGas");
+        auto sol = Cantera::newSolution("./src/reaction-mech/CH4_2S.yaml", "CH4_BFER_multi");
         sols.push_back(sol);
     }
 
@@ -118,10 +119,12 @@ void LBM::loop(int nstep, int tout)
 
         Collide();   // collision step
         // std::cout << "  Mixture Collision Done" << std::endl;
+
         Streaming();        // streaming step & BC
         // std::cout << "  Streaming Done" << std::endl;
         TMS_BC();
-        // std::cout << "  Apply BC Done" << std::endl;
+        // std::cout << "  Apply BC Done" << std::endl;        
+        
         // fill_BC();
         // std::cout << "  Fill BC Done" << std::endl;
         calculate_moment(); // calculate moment
@@ -132,7 +135,7 @@ void LBM::loop(int nstep, int tout)
             OutputVTK(step, this);      // Save the macroscopic quantity
             OutputKeEns(step, this);
         }
-        if (step % (1*tout) == 0)
+        if (step % (100*tout) == 0)
             write_restart(step, this);
 
     }
