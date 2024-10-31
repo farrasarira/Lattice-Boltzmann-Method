@@ -72,7 +72,7 @@
         // }
 
         // the following methods convert SI units into simulation units (have to be called after set_m_kg_s(...);)
-        // float x(const float si_x) const { return si_x/m; } // length si_x = x*[m]
+        float x(const float si_x) const { return si_x/m; } // length si_x = x*[m]
         // float M(const float si_M) const { return si_M/kg; } // mass si_M = M*[kg]
         // float t(const float si_t) const { return (si_t/s); } // time si_t = t*[s]
         float temp(const float si_temp) const {return si_temp/K;} // temperature

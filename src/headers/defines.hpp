@@ -38,8 +38,10 @@
     // #define OPPOSED_JET
     // #define OPPOSED_JET_MULTICOMP
     // #define POINT_COMBUSTION_2D
-    #define FLAME_SPEED
+    // #define FLAME_SPEED
     // #define PREMIXED_LAMINAR_FLAME_2D
+    // #define CONVECTED_VORTEX
+    #define COFLOW_FLAME
 
 
     // ################ ISOTHERMAL ###################
@@ -55,7 +57,7 @@
     // ########## Parallel Computation ###############
     // Uncomment 2 lines of code below to utilize parallel computation using OpenMP
     #define PARALLEL
-    #define NUM_THREADS 70
+    #define NUM_THREADS 12
 
     // ############### OUTPUT UNIT ###################
     // #define OUTPUT_SI               // uncomment for SI UNIT, comment for LATTICE UNIT
@@ -84,12 +86,12 @@
     #elif defined AA
         #define D2Q9
         #define NDIM 2
-    #elif defined TAYLOR_GREEN_2D || defined TAYLOR_GREEN_3D || defined CHANNEL_FLOW_3D || defined CYLINDER_3D || defined VISCOSITY_TEST || defined CONDUCTIVITY_TEST || defined SOUNDSPEED_TEST || defined SOD_SHOCK || defined TERNARY_DIFFUSION || defined SOD_SHOCK_SIUNIT || defined SHEAR_LAYER_MULTICOMP || defined PERFECTLY_STIRRED_REACTOR_3D || defined CYLINDER_2D || defined CONDUCTION_1D || defined BPVT_1 || defined COUETTE_FLOW || defined COUETTE_FLOW_MULTICOMP || defined TAYLOR_GREEN_3D_MULTICOMP || defined SHEAR_LAYER || defined SHOCK_VORTEX_INTERAC || defined RB_INSTABILITY || defined CONDUCTION_BLACK || defined RB_INSTABILITY_MULTICOMP || defined VISCOSITY_TEST_MULTICOMP || defined VISCOSITY_TEST_ROTATED || defined OPPOSED_JET || defined POINT_COMBUSTION_2D || defined FLAME_SPEED || defined PREMIXED_LAMINAR_FLAME_2D || defined OPPOSED_JET_MULTICOMP
+    #elif defined TAYLOR_GREEN_2D || defined TAYLOR_GREEN_3D || defined CHANNEL_FLOW_3D || defined CYLINDER_3D || defined VISCOSITY_TEST || defined CONDUCTIVITY_TEST || defined SOUNDSPEED_TEST || defined SOD_SHOCK || defined TERNARY_DIFFUSION || defined SOD_SHOCK_SIUNIT || defined SHEAR_LAYER_MULTICOMP || defined PERFECTLY_STIRRED_REACTOR_3D || defined CYLINDER_2D || defined CONDUCTION_1D || defined BPVT_1 || defined COUETTE_FLOW || defined COUETTE_FLOW_MULTICOMP || defined TAYLOR_GREEN_3D_MULTICOMP || defined SHEAR_LAYER || defined SHOCK_VORTEX_INTERAC || defined RB_INSTABILITY || defined CONDUCTION_BLACK || defined RB_INSTABILITY_MULTICOMP || defined VISCOSITY_TEST_MULTICOMP || defined VISCOSITY_TEST_ROTATED || defined OPPOSED_JET || defined POINT_COMBUSTION_2D || defined FLAME_SPEED || defined PREMIXED_LAMINAR_FLAME_2D || defined OPPOSED_JET_MULTICOMP || defined CONVECTED_VORTEX || defined COFLOW_FLAME
         #define D3Q27
         #define NDIM 3
     #endif
 
-    #if defined TERNARY_DIFFUSION || defined SOD_SHOCK_SIUNIT || defined SHEAR_LAYER_MULTICOMP || defined PERFECTLY_STIRRED_REACTOR_3D || defined CONDUCTION_1D || defined COUETTE_FLOW_MULTICOMP || defined TAYLOR_GREEN_3D_MULTICOMP || defined RB_INSTABILITY_MULTICOMP || defined VISCOSITY_TEST_MULTICOMP || defined POINT_COMBUSTION_2D || defined FLAME_SPEED || defined PREMIXED_LAMINAR_FLAME_2D || defined OPPOSED_JET_MULTICOMP
+    #if defined TERNARY_DIFFUSION || defined SOD_SHOCK_SIUNIT || defined SHEAR_LAYER_MULTICOMP || defined PERFECTLY_STIRRED_REACTOR_3D || defined CONDUCTION_1D || defined COUETTE_FLOW_MULTICOMP || defined TAYLOR_GREEN_3D_MULTICOMP || defined RB_INSTABILITY_MULTICOMP || defined VISCOSITY_TEST_MULTICOMP || defined POINT_COMBUSTION_2D || defined FLAME_SPEED || defined PREMIXED_LAMINAR_FLAME_2D || defined OPPOSED_JET_MULTICOMP || defined CONVECTED_VORTEX || defined COFLOW_FLAME
         #define MULTICOMP
     #endif
 
@@ -101,6 +103,8 @@
     #define TYPE_FS 4  // Adiabatic Free-Slip Wall
     #define TYPE_I 5 // Inflow boundary condition
     #define TYPE_O 6 // Outflow boundary condition (Neumann Boundary Condition | Zero gradient for all variables)
+    #define TYPE_I_C 7 // Inflow boundary condition
+    #define TYPE_O_C 8 // Outflow boundary condition (Neumann Boundary Condition | Zero gradient for all variables)
 
     
 

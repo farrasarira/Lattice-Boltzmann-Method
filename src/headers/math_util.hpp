@@ -22,4 +22,6 @@
     double FD_limiterMinmod(double stc_n, double stc_c, double stc_p, double dx);
     double FD_limiterVanleer(double stc_n, double stc_c, double stc_p, double dx);
 
+    bool onlyOne_1(double a, double b, double c);
+
 #endif

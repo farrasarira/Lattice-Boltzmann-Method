@@ -59,7 +59,7 @@ void LBM::Streaming()
                             mixture[i][j][k].g[l] = mixture[i][j][k].gpc[opposite[l]];
                             #endif
                         } 
-                        else if (mixture[i_nb][j_nb][k_nb].type==TYPE_O){ 
+                        else if (mixture[i_nb][j_nb][k_nb].type==TYPE_O || mixture[i_nb][j_nb][k_nb].type==TYPE_O_C){ 
                             // #ifndef MULTICOMP
                             // mixture[i][j][k].f[l] = mixture[i_nb][j_nb][k_nb].fpc[l];
                             // #else
@@ -71,7 +71,7 @@ void LBM::Streaming()
                             // mixture[i][j][k].g[l] = mixture[i_nb][j_nb][k_nb].gpc[l];          
                             // #endif 
                         }  
-                        else if (mixture[i_nb][j_nb][k_nb].type==TYPE_I)
+                        else if (mixture[i_nb][j_nb][k_nb].type==TYPE_I || mixture[i_nb][j_nb][k_nb].type==TYPE_I_C)
                         { 
                             // #ifndef MULTICOMP
                             // mixture[i][j][k].f[l] = mixture[i_nb][j_nb][k_nb].f[l];
