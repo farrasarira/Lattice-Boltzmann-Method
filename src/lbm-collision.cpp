@@ -227,8 +227,8 @@ void LBM::Collide_Species()
                     auto gas = sols[rank]->thermo();   
                     std::vector <double> Y (gas->nSpecies());
                     for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = (species[a][i][j][k].rho) / mixture[i][j][k].rho;
-                    gas->setState_TD(units.si_temp(mixture[i][j][k].temp), units.si_rho(mixture[i][j][k].rho));
                     gas->setMassFractions(&Y[0]);   
+                    gas->setState_TD(units.si_temp(mixture[i][j][k].temp), units.si_rho(mixture[i][j][k].rho));
                                         
                     // Reaction ---------------------------------------------------------------------------------------------------------------------------
                     #ifdef REACTION
@@ -248,10 +248,11 @@ void LBM::Collide_Species()
                                 double rho_dot = units.rho_dot(w_dot[a] * gas->molecularWeight(a));
                                 rho_a[a] += dt_sim/maxIter * rho_dot;
                             }
-
+                    
+                            std::fill(Y.begin(), Y.end(), 0.0);
                             for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = (species[a][i][j][k].rho+rho_a[a]) / mixture[i][j][k].rho;
-                            gas->setState_UV(units.si_energy_mass(internalEnergy), 1.0/units.si_rho(mixture[i][j][k].rho),1.0e-15);
                             gas->setMassFractions(&Y[0]);
+                            gas->setState_UV(units.si_energy_mass(internalEnergy), 1.0/units.si_rho(mixture[i][j][k].rho),1.0e-15);
                             p++;
                         }while(p < maxIter);
                     #endif
@@ -259,8 +260,8 @@ void LBM::Collide_Species()
                     // Viscosity -----------------------------------------------------------------------------------------------------------------------------                    
                     std::fill(Y.begin(), Y.end(), 0.0);
                     for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = (species[a][i][j][k].rho) / mixture[i][j][k].rho;
-                    gas->setState_TD(units.si_temp(mixture[i][j][k].temp), units.si_rho(mixture[i][j][k].rho));
                     gas->setMassFractions(&Y[0]);
+                    gas->setState_TD(units.si_temp(mixture[i][j][k].temp), units.si_rho(mixture[i][j][k].rho));
                     
                     auto trans = sols[rank]->transport();
                     int ld = gas->nSpecies();

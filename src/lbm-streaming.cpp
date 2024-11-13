@@ -47,7 +47,7 @@ void LBM::Streaming()
                             #endif
                         }
                         //---- Adiabatic Wall --------------------------
-                        else if (mixture[i_nb][j_nb][k_nb].type==TYPE_A){
+                        else if (mixture[i_nb][j_nb][k_nb].type==TYPE_A ){
                             #ifndef MULTICOMP
                             mixture[i][j][k].f[l] = mixture[i][j][k].fpc[opposite[l]];
                             #else

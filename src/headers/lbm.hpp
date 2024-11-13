@@ -138,6 +138,7 @@
 
             // calculate moment
             void calculate_moment();
+            void calculate_moment_point(int i, int j, int k);
             void calculate_moment_smoothing(){
                 calculate_moment();
                 Smoothing();
