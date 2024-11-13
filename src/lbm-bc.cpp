@@ -121,6 +121,178 @@ void LBM::fill_BC()
 void LBM::TMS_BC()
 {
     #if defined MULTICOMP
+     #ifdef PARALLEL 
+    // #pragma omp parallel for schedule(static, 1) 
+    #endif
+    for(int i=0; i<Nx; ++i){
+        for(int j=0; j<Ny; ++j){
+            for(int k = 0; k<Nz; ++k){
+                if(mixture[i][j][k].type==TYPE_F){
+                    int i_nb, j_nb, k_nb;
+                    double fa_tgt[nSpecies][npop];
+                    double g_tgt[npop];
+                    double fa_loc[nSpecies][npop];
+                    double g_loc[npop];
+                    bool interface_nodes[npop] = {false}; 
+                    int n_d = 0;
+
+                    // check interface node                         
+                    for (int l=0; l < npop; ++l){
+                        i_nb = i - cx[l];
+                        j_nb = j - cy[l];
+                        k_nb = k - cz[l];
+
+                        if(mixture[i_nb][j_nb][k_nb].type==TYPE_S && mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].type==TYPE_F){    
+                            interface_nodes[l] = true;
+                            n_d = n_d + 1;
+                        }                            
+                    }
+
+                    // check if there is the node is the interface with boundary
+                    if (n_d == 0)
+                        continue;
+
+                    // step 1: calculate f_tgt, g_tft, and fa_tgt
+                    double rho_bb = 0.0;
+                    double rhoa_bb[nSpecies] = {0.0};
+                    for (size_t a = 0; a < nSpecies; ++a){
+                        for (int l=0; l < npop; ++l)
+                            rhoa_bb[a] += species[a][i][j][k].f[l];
+                        rho_bb += rhoa_bb[a];
+                    }
+
+                    double vel_tgt[3] = {0.0};
+                    double vela_tgt[nSpecies][3] = {0.0};
+                    double T_tgt = 0.0;
+                    for (int l=0; l < npop; ++l){
+                        if (interface_nodes[l] == true){
+                            double q = 0.5;
+                            vel_tgt[0] += (q*mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].u+mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].u)/(1.0+q);
+                            vel_tgt[1] += (q*mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].v+mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].v)/(1.0+q);
+                            vel_tgt[2] += (q*mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].w+mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].w)/(1.0+q);
+                            T_tgt += (q*mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].temp+mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].temp)/(1.0+q);
+                            for (size_t a = 0; a < nSpecies; ++a){
+                                vela_tgt[a][0] += (q*species[a][(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].u+mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].u)/(1.0+q);
+                                vela_tgt[a][1] += (q*species[a][(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].v+mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].v)/(1.0+q);
+                                vela_tgt[a][2] += (q*species[a][(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].w+mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].w)/(1.0+q);
+                            }
+                        }
+                    }
+                    
+                    vel_tgt[0] = 1.0/n_d * vel_tgt[0];
+                    vel_tgt[1] = 1.0/n_d * vel_tgt[1];
+                    vel_tgt[2] = 1.0/n_d * vel_tgt[2];
+                    T_tgt = 1.0/n_d * T_tgt;
+                    for (size_t a = 0; a < nSpecies; ++a){
+                        vela_tgt[a][0] = 1.0/n_d * vela_tgt[a][0];
+                        vela_tgt[a][1] = 1.0/n_d * vela_tgt[a][1];
+                        vela_tgt[a][2] = 1.0/n_d * vela_tgt[a][2];
+                    }
+
+                    // std::cout << vel_tgt[0] << " | " << T_tgt << std::endl;
+                    calculate_feq_geq(fa_tgt, g_tgt, rho_bb, rhoa_bb, vel_tgt, vela_tgt, T_tgt);
+
+                    // // step 2: calculate f_loc, g_loc, and fa_loc (local distribution function)
+                    double rho_loc = 0.0;
+                    double vel_loc[3] = {0.0};
+                    double rhoe_loc = 0.0;
+                    double rhoa_loc[nSpecies] = {0.0};
+                    double vela_loc[nSpecies][3] = {0.0};
+                    
+                    for (int l=0; l < npop; ++l){
+                        i_nb = i - cx[l];
+                        j_nb = j - cy[l];
+                        k_nb = k - cz[l];
+
+                        if (mixture[i_nb][j_nb][k_nb].type==TYPE_S){
+                            for (size_t a = 0; a < nSpecies; ++a){
+                                rhoa_loc[a] += fa_tgt[a][l];
+                                vela_loc[a][0] += fa_tgt[a][l]*cx[l];
+                                vela_loc[a][1] += fa_tgt[a][l]*cy[l];
+                                vela_loc[a][2] += fa_tgt[a][l]*cz[l];
+                            }
+                            rhoe_loc += g_tgt[l];
+                        }
+                        else{
+                            for (size_t a = 0; a < nSpecies; ++a){
+                                rhoa_loc[a] += species[a][i][j][k].f[l];
+                                vela_loc[a][0] += species[a][i][j][k].f[l]*cx[l];
+                                vela_loc[a][1] += species[a][i][j][k].f[l]*cy[l];
+                                vela_loc[a][2] += species[a][i][j][k].f[l]*cz[l];
+                            }
+                            #ifndef ISOTHERM
+                            rhoe_loc += mixture[i][j][k].g[l];
+                            #endif
+                        }
+                    }
+
+                    for (size_t a = 0; a < nSpecies; ++a){
+                        rho_loc += rhoa_loc[a];
+                        vel_loc[0] += vela_loc[a][0];
+                        vel_loc[1] += vela_loc[a][1];
+                        vel_loc[2] += vela_loc[a][2];
+
+                        if(rhoa_loc[a] > 0){
+                            vela_loc[a][0] = vela_loc[a][0] / rhoa_loc[a];
+                            vela_loc[a][1] = vela_loc[a][1] / rhoa_loc[a];
+                            vela_loc[a][2] = vela_loc[a][2] / rhoa_loc[a];
+                        }
+                        else {
+                            vela_loc[a][0] = 0.0;
+                            vela_loc[a][1] = 0.0;
+                            vela_loc[a][2] = 0.0;
+                        }
+                    }
+                    if(rho_loc > 0){
+                        vel_loc[0] = vel_loc[0] / rho_loc;
+                        vel_loc[1] = vel_loc[1] / rho_loc;
+                        vel_loc[2] = vel_loc[2] / rho_loc;
+                    }
+                    else{
+                        vel_loc[0] = 0.0; 
+                        vel_loc[1] = 0.0;
+                        vel_loc[2] = 0.0;
+                    }
+
+                    double internalEnergy=rhoe_loc/rho_loc;// - 0.5*v_sqr(vel_loc[0], vel_loc[1], vel_loc[2]); 
+                    for (size_t a = 0; a < nSpecies; ++a){
+                        internalEnergy = internalEnergy - 0.5 * rhoa_loc[a]/rho_loc * v_sqr(vela_loc[a][0], vela_loc[a][1], vela_loc[a][2]);
+                    }                         
+                    double T_loc = calculate_temp(internalEnergy, rho_loc, rhoa_loc);
+
+                    calculate_feq_geq(fa_loc, g_loc, rho_loc, rhoa_loc, vel_loc, vela_loc, T_loc);
+
+                    for (int l=0; l < npop; ++l){
+                        i_nb = i - cx[l];
+                        j_nb = j - cy[l];
+                        k_nb = k - cz[l];
+
+                        if (mixture[i_nb][j_nb][k_nb].type==TYPE_S){
+                            for(size_t a = 0; a < nSpecies; ++a)
+                                species[a][i][j][k].f[l] = 2*fa_tgt[a][l] - fa_loc[a][l];
+
+                            #ifndef ISOTHERM
+                            mixture[i][j][k].g[l] = 2*g_tgt[l] - g_loc[l];
+                            #endif
+                        }
+                        else{
+                            for(size_t a = 0; a < nSpecies; ++a)
+                                species[a][i][j][k].f[l] = fa_tgt[a][l] + species[a][i][j][k].f[l] - fa_loc[a][l];
+
+                            #ifndef ISOTHERM
+                            mixture[i][j][k].g[l] = g_tgt[l] + mixture[i][j][k].g[l] - g_loc[l];
+                            #endif
+                        }
+                    }                   
+
+                } 
+            }
+        }
+    }
+    #endif
+
+
+    #if defined MULTICOMP
     #ifdef PARALLEL 
         #pragma omp parallel for schedule(static, 1) 
     #endif
@@ -150,6 +322,8 @@ void LBM::TMS_BC()
                     // check if there is the node is the interface with boundary
                     if (l_interface == 999 || !onlyOne_1(cx[l_interface], cy[l_interface], cz[l_interface]))
                         continue;
+
+                    calculate_moment_point((int)(i+cx[l_interface]), (int)(j+cy[l_interface]), (int)(k+cz[l_interface]));
 
                     double rho_out = 0.0;
                     double vel_out[3] = {0.0};
@@ -665,8 +839,7 @@ void LBM::TMS_BC()
                         double g_tgt[npop];
                         double fa_loc[nSpecies][npop];
                         double g_loc[npop];
-                        bool interface_nodes[npop] = {false}; 
-                        int n_d = 0;
+                        int l_interface = 999;
 
                         // check interface node                         
                         for (int l=0; l < npop; ++l){
@@ -674,36 +847,34 @@ void LBM::TMS_BC()
                             j_nb = j - cy[l];
                             k_nb = k - cz[l];
 
-                            if(mixture[i_nb][j_nb][k_nb].type==TYPE_I && mixture[int (i+cx[l])][int (j+cy[l])][int (k+cz[l])].type==TYPE_F){    
-                                interface_nodes[l] = true;
-                                n_d = n_d + 1;
+                            if( (mixture[i_nb][j_nb][k_nb].type==TYPE_I || mixture[i_nb][j_nb][k_nb].type==TYPE_I_C) && mixture[int (i+cx[l])][int (j+cy[l])][int (k+cz[l])].type==TYPE_F){    
+                                l_interface = l;
                                 break;
                             }                            
                         }
 
                         // check if there is the node is the interface with boundary
-                        if (n_d == 0)
+                        if (l_interface == 999 || !onlyOne_1(cx[l_interface], cy[l_interface], cz[l_interface]))
                             continue;
+
+                        calculate_moment_point((int)(i+cx[l_interface]), (int)(j+cy[l_interface]), (int)(k+cz[l_interface]));
 
                         double vel_in[3] = {0.0};
                         double T_in = 0.0;
                         double rho_in = 0.0;
                         double rhoa_in[nSpecies] = {0.0};
                         double p_in = 0.0;
-                        for (int l=0; l < npop; ++l){
-                            if (interface_nodes[l] == true){
-                                vel_in[0] = mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].u;
-                                vel_in[1] = mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].v;
-                                vel_in[2] = mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].w;
-                                T_in = mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].temp;
-                                rho_in = mixture[(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].rho;
-                                for(size_t a = 0; a < nSpecies; ++a)
-                                    rhoa_in[a] = species[a][(int)(i-cx[l])][(int)(j-cy[l])][(int)(k-cz[l])].rho;
-                                
-                                p_in = mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].p;
-                                break;
-                            }
-                        }
+
+                        vel_in[0] = mixture[(int)(i-cx[l_interface])][(int)(j-cy[l_interface])][(int)(k-cz[l_interface])].u;
+                        vel_in[1] = mixture[(int)(i-cx[l_interface])][(int)(j-cy[l_interface])][(int)(k-cz[l_interface])].v;
+                        vel_in[2] = mixture[(int)(i-cx[l_interface])][(int)(j-cy[l_interface])][(int)(k-cz[l_interface])].w;
+                        T_in = mixture[(int)(i-cx[l_interface])][(int)(j-cy[l_interface])][(int)(k-cz[l_interface])].temp;
+                        rho_in = mixture[(int)(i-cx[l_interface])][(int)(j-cy[l_interface])][(int)(k-cz[l_interface])].rho;
+                        for(size_t a = 0; a < nSpecies; ++a)
+                            rhoa_in[a] = species[a][(int)(i-cx[l_interface])][(int)(j-cy[l_interface])][(int)(k-cz[l_interface])].rho;
+                        
+                        p_in = mixture[(int)(i+cx[l_interface])][(int)(j+cy[l_interface])][(int)(k+cz[l_interface])].p;
+
 
                         int rank = omp_get_thread_num();
                         auto gas = sols[rank]->thermo();   
@@ -785,7 +956,11 @@ void LBM::TMS_BC()
                         }
 
                         #ifndef ISOTHERM
-                        double internalEnergy=rhoe_loc/rho_loc - 0.5*v_sqr(vel_loc[0], vel_loc[1], vel_loc[2]);                     
+                        double internalEnergy=rhoe_loc/rho_loc;// - 0.5*v_sqr(vel_loc[0], vel_loc[1], vel_loc[2]); 
+                        for (size_t a = 0; a < nSpecies; ++a){
+                            internalEnergy = internalEnergy - 0.5 * rhoa_loc[a]/rho_loc * v_sqr(vela_loc[a][0], vela_loc[a][1], vela_loc[a][2]);
+                        }     
+                        // double internalEnergy=rhoe_loc/rho_loc - 0.5*v_sqr(vel_loc[0], vel_loc[1], vel_loc[2]); 
                         double T_loc = calculate_temp(internalEnergy, rho_loc, rhoa_loc);
                         #else
                         double T_loc = T_in;
@@ -859,14 +1034,18 @@ void LBM::dirSlip(int l, int i, int j, int k, int &lp, int &ip, int &jp, int &kp
         cxp = -1.0*cx[l];
         ip = i;
     }
-    if (j_chk == true){
+    else if (j_chk == true){
         cyp = -1.0*cy[l];
         jp = j;
     }
-    if (k_chk == true){
+    else if (k_chk == true){
         czp = -1.0*cz[l];
         kp = k;
     } 
+
+    ip = ((ip - 1 + (Nx-2)) % (Nx-2)) + 1;
+    jp = ((jp - 1 + (Ny-2)) % (Ny-2)) + 1;
+    kp = ((kp - 1 + (Nz-2)) % (Nz-2)) + 1;
     
     for(size_t a = 0; a < npop; ++a){
         if (cxp == cx[a] && cyp == cy[a] && czp == cz[a]){

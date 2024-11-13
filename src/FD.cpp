@@ -26,12 +26,12 @@ double fd_central(double stc_l, double stc_c, double stc_r, double dx, double ve
 {
     double res = 0.0;
     
-    if (type_l == TYPE_S || type_l == TYPE_A || type_l == TYPE_FS || type_l == TYPE_P || type_l == TYPE_O || type_l == TYPE_O_C || type_l == TYPE_I || type_l == TYPE_I_C)
+    if (type_l == TYPE_S || type_l == TYPE_A || type_l == TYPE_FS || type_l == TYPE_P || type_l == TYPE_O || type_l == TYPE_O_C)
         if (type_r == TYPE_P)
             res = 0.0;
         else
             res = (stc_r - stc_c) / (dx);
-    else if (type_r == TYPE_S || type_r == TYPE_A || type_r == TYPE_FS || type_r == TYPE_P || type_r == TYPE_O || type_r == TYPE_O_C || type_r == TYPE_I || type_r == TYPE_I_C)
+    else if (type_r == TYPE_S || type_r == TYPE_A || type_r == TYPE_FS || type_r == TYPE_P || type_r == TYPE_O || type_r == TYPE_O_C)
         if (type_l == TYPE_P)
             res = 0.0;
         else
