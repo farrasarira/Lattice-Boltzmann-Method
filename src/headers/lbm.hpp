@@ -11,6 +11,7 @@
     // #include <eigen3/Eigen/QR>
     #include "output.hpp"
     #include "cantera.hpp"
+    #include "math_util.hpp"
  
 
     #if defined D1Q3
@@ -255,5 +256,36 @@
             #endif
 
     };
+
+    inline double LBM::calculate_feq(int l, double rho, double velocity[], double theta, double corr[])
+    {
+    double eps = 0.0;
+    double P = 0.0;
+    double feq = rho;
+
+        eps = velocity[0];
+        P = theta + sq(velocity[0]) + corr[0];
+        if (cx[l] == 0) feq *= (1 - P);
+        else if (cx[l] == 1) feq *= (eps+P)/2;
+        else if (cx[l] == -1) feq*= (-eps+P)/2;
+
+    #if NDIM == 2 || NDIM == 3
+        eps = velocity[1];
+        P = theta + sq(velocity[1]) + corr[1];;
+        if (cy[l] == 0) feq *= (1 - P);
+        else if (cy[l] == 1) feq *= (eps+P)/2;
+        else if (cy[l] == -1) feq*= (-eps+P)/2;
+    #endif
+
+    #if NDIM == 3
+        eps = velocity[2];
+        P = theta + sq(velocity[2]) + corr[2];
+        if (cz[l] == 0) feq *= (1 - P);
+        else if (cz[l] == 1) feq *= (eps+P)/2;
+        else if (cz[l] == -1) feq*= (-eps+P)/2;
+    #endif
+
+    return feq;
+    }
 
 #endif

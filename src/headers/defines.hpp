@@ -64,7 +64,7 @@
     // ########## Parallel Computation ###############
     // Uncomment 2 lines of code below to utilize parallel computation using OpenMP
     #define PARALLEL
-    #define NUM_THREADS 12
+    #define NUM_THREADS 15
 
     // ############### OUTPUT UNIT ###################
     // #define OUTPUT_SI               // uncomment for SI UNIT, comment for LATTICE UNIT

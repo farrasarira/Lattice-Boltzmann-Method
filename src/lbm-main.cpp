@@ -117,27 +117,39 @@ void LBM::loop(int nstep, int tout)
     // Simulation loop
     for (int step = this->step+1; step <= nstep; ++step)
     {
+        // double start = omp_get_wtime();
         #ifdef MULTICOMP
         Collide_Species();  // collide species distribution function
         // std::cout << "  Species Collision Done" << std::endl;
         #endif
+        // std::cout << "Collision species     : " << double(omp_get_wtime()-start) << " seconds" << std::endl;
 
+        // start = omp_get_wtime();
         Collide();   // collision step
         // std::cout << "  Mixture Collision Done" << std::endl;
+        // std::cout << "Collision mixture     : " << double(omp_get_wtime()-start) << " seconds" << std::endl;
 
+        // start = omp_get_wtime();
         Streaming();        // streaming step & BC
         // std::cout << "  Streaming Done" << std::endl;
+        // std::cout << "Streaming process     : " << double(omp_get_wtime()-start) << " seconds" << std::endl;
+
+        // start = omp_get_wtime();
         TMS_BC();
-        // std::cout << "  Apply BC Done" << std::endl;        
+        // std::cout << "  Apply BC Done" << std::endl;  
+        // std::cout << "TMS BC                : " << double(omp_get_wtime()-start) << " seconds" << std::endl;
         
         // fill_BC();
         // std::cout << "  Fill BC Done" << std::endl;
+        
+        // start = omp_get_wtime();
         #ifdef SMOOTHING
             calculate_moment_smoothing(); // calculate moment
         #else
             calculate_moment(); // calculate moment
         #endif
         // std::cout << "  Calculate Moment Done" << std::endl;
+        // std::cout << "Moment                : " << double(omp_get_wtime()-start) << " seconds" << std::endl;
         
 
         if (step % tout == 0){
