@@ -192,8 +192,10 @@ void LBM::calculate_moment()
 
                     double D_ab[nSpecies][nSpecies];
                     for(size_t a = 0; a < nSpecies; ++a)                      
-                        for(size_t b = 0; b < nSpecies; ++b)
+                        for(size_t b = 0; b <= a; ++b){
                             D_ab[a][b] =  units.nu( d[ld*gas->speciesIndex(speciesName[b]) + gas->speciesIndex(speciesName[a])] );
+                            D_ab[b][a] = D_ab[a][b];
+                        }
 
                     Eigen::SparseMatrix<double> matrix_A(nSpecies, nSpecies);
                     Eigen::VectorXd vector_rx(nSpecies);
@@ -222,9 +224,9 @@ void LBM::calculate_moment()
                     }
 
                     // Eigen::SparseLU<Eigen::SparseMatrix<double> , Eigen::COLAMDOrdering<int> > solver;
-                    Eigen::SparseLU<Eigen::SparseMatrix<double> > solver;
-                    solver.analyzePattern(matrix_A);
-                    solver.factorize(matrix_A);                
+                    Eigen::SimplicialLLT<Eigen::SparseMatrix<double> > solver;
+                    // solver.analyzePattern(matrix_A);
+                    // solver.factorize(matrix_A);                
                     solver.compute(matrix_A);
 
                     vector_u = solver.solve(vector_rx);
@@ -260,7 +262,6 @@ void LBM::calculate_moment()
             
                     mixture[i][j][k].temp = units.temp(gas->temperature()); 
                     mixture[i][j][k].p = units.p(gas->pressure()); 
-                    // gas_const = units.cp(Cantera::GasConstant/gas->meanMolecularWeight());
 
                 }
             }
