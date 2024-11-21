@@ -2384,7 +2384,7 @@ void main_setup()
 {
     // units.set_m_kg_s(3e-5, 2e-8);
     // units.set_m_kg_s(3e-5, 2e-8); //3e-5, 2e-8
-    units.set_m_kg_s(3e-5, 3e-8);
+    units.set_m_kg_s(3e-5, 8e-9);
 
     double NX = 187;
     double NY = 334;
@@ -2497,7 +2497,7 @@ void main_setup()
             }
         }
     }
-    lb.run(5000000000,1);
+    lb.run(5000000000,10);
 
     // LBM lb =read_restart("restart020000.dat");
     // lb.loop(5000000000,1);
