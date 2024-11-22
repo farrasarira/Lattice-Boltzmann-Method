@@ -76,10 +76,10 @@ LBM::LBM(int Nx, int Ny, int Nz, std::vector<std::string> species)
     for(int i = 0; i < nThreads; ++i)
     {
         // auto sol = Cantera::newSolution("gri30.yaml", "gri30","mixture-averaged");
-        // auto sol = Cantera::newSolution("h2o2.yaml", "ohmech");
+        auto sol = Cantera::newSolution("h2o2.yaml", "ohmech");
         // auto sol = Cantera::newSolution("gri30.yaml", "gri30", "multicomponent");
         // auto sol = Cantera::newSolution("./src/reaction-mech/one-step.yaml", "FakeGas");
-        auto sol = Cantera::newSolution("./src/reaction-mech/CH4_2S.yaml", "CH4_BFER_multi");
+        // auto sol = Cantera::newSolution("./src/reaction-mech/CH4_2S.yaml", "CH4_BFER_multi");
         // auto sol = Cantera::newSolution("./src/reaction-mech/propane_mech.yaml");
         sols.push_back(sol);
     }
