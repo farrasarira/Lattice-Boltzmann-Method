@@ -24,7 +24,7 @@
     // #define SOD_SHOCK_SIUNIT
     // #define TERNARY_DIFFUSION
     // #define SHEAR_LAYER_MULTICOMP
-    #define PERFECTLY_STIRRED_REACTOR_3D
+    // #define PERFECTLY_STIRRED_REACTOR_3D
     // #define CONDUCTION_1D
     // #define COUETTE_FLOW
     // #define COUETTE_FLOW_MULTICOMP
@@ -41,12 +41,10 @@
     // #define FLAME_SPEED
     // #define PREMIXED_LAMINAR_FLAME_2D
     // #define CONVECTED_VORTEX
-    // #define COFLOW_FLAME
+    #define COFLOW_FLAME
     // #define OPPOSED_JET_FLAME
     // #define PREMIXED_JET_FLAME
-    // #define PREMIXED_JET_FLAME
     // #define MICROCHANNEL_FLAME
-
 
     // ################ ISOTHERMAL ###################
     // #define ISOTHERM

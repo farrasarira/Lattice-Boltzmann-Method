@@ -350,27 +350,33 @@ void LBM::Collide_Species()
                     // const double PR = trans->viscosity()*gas->cp_mass() / trans->thermalConductivity();       
                     // const double G_lambda = Ra*(NU*NU/PR) / (units.temp(50.0)*(Ny-2.0)*(Ny-2.0)*(Ny-2.0));
 
-                    for(size_t a = 0; a < nSpecies; ++a){
+                    // Calculate Moment & Kinetic Equation ---------------------------------------------------------------------------------------------------
+                    for (size_t a = 0; a < nSpecies; ++a)
+                    {
                         double velocity[3] = {  ux[a],
                                                 uy[a], 
-                                                uz[a]};
+                                                uz[a]   };
                         double velocity_du[3] = {   ux[a] + fx[a],
                                                     uy[a] + fy[a], //+ dt_sim*G_lambda*(mixture[i][j][k].temp-units.temp(325.0) 
                                                     uz[a] + fz[a]};
-                        double theta = units.energy_mass( Cantera::GasConstant*mixture[i][j][k].temp / mmass[a] );
-                        double gas_const_a = units.cp( Cantera::GasConstant / mmass[a] );
+
+                        double gas_const_a = units.cp(Cantera::GasConstant/mmass[a]);
+                        double theta = gas_const_a * mixture[i][j][k].temp;
+
                         double delQdevx, delQdevy, delQdevz;                            
                         delQdevx = fd_central(species[a][i-1][j][k].rho*species[a][i-1][j][k].u*(1-3*gas_const_a*mixture[i-1][j][k].temp)-species[a][i-1][j][k].rho*cb(species[a][i-1][j][k].u), species[a][i][j][k].rho*species[a][i][j][k].u*(1-3*gas_const_a*mixture[i][j][k].temp)-species[a][i][j][k].rho*cb(species[a][i][j][k].u), species[a][i+1][j][k].rho*species[a][i+1][j][k].u*(1-3*gas_const_a*mixture[i+1][j][k].temp)-species[a][i+1][j][k].rho*cb(species[a][i+1][j][k].u), dx, species[a][i][j][k].u, mixture[i-1][j][k].type, mixture[i+1][j][k].type);
                         delQdevy = fd_central(species[a][i][j-1][k].rho*species[a][i][j-1][k].v*(1-3*gas_const_a*mixture[i][j-1][k].temp)-species[a][i][j-1][k].rho*cb(species[a][i][j-1][k].v), species[a][i][j][k].rho*species[a][i][j][k].v*(1-3*gas_const_a*mixture[i][j][k].temp)-species[a][i][j][k].rho*cb(species[a][i][j][k].v), species[a][i][j+1][k].rho*species[a][i][j+1][k].v*(1-3*gas_const_a*mixture[i][j+1][k].temp)-species[a][i][j+1][k].rho*cb(species[a][i][j+1][k].v), dy, species[a][i][j][k].v, mixture[i][j-1][k].type, mixture[i][j+1][k].type);
                         delQdevz = fd_central(species[a][i][j][k-1].rho*species[a][i][j][k-1].w*(1-3*gas_const_a*mixture[i][j][k-1].temp)-species[a][i][j][k-1].rho*cb(species[a][i][j][k-1].w), species[a][i][j][k].rho*species[a][i][j][k].w*(1-3*gas_const_a*mixture[i][j][k].temp)-species[a][i][j][k].rho*cb(species[a][i][j][k].w), species[a][i][j][k+1].rho*species[a][i][j][k+1].w*(1-3*gas_const_a*mixture[i][j][k+1].temp)-species[a][i][j][k+1].rho*cb(species[a][i][j][k+1].w), dz, species[a][i][j][k].w, mixture[i][j][k-1].type, mixture[i][j][k+1].type);
-                        double corr[3] = {  dt_sim*(2.0-omega_a[a])/(2*species[a][i][j][k].rho*omega_a[a])*delQdevx,
-                                            dt_sim*(2.0-omega_a[a])/(2*species[a][i][j][k].rho*omega_a[a])*delQdevy,
-                                            dt_sim*(2.0-omega_a[a])/(2*species[a][i][j][k].rho*omega_a[a])*delQdevz};
+                        double corr[3] = {  dt_sim*(2-omega_a[a])/(2*species[a][i][j][k].rho*omega_a[a])*delQdevx,
+                                            dt_sim*(2-omega_a[a])/(2*species[a][i][j][k].rho*omega_a[a])*delQdevy,
+                                            dt_sim*(2-omega_a[a])/(2*species[a][i][j][k].rho*omega_a[a])*delQdevz};
+
                         double corr_zero[3] = {0.0, 0.0, 0.0};
 
-                        for (int l = 0; l < npop; ++l){
+                        for (int l = 0; l < npop; ++l)
+                        {
                             double feq_a = calculate_feq(l, species[a][i][j][k].rho, velocity, theta, corr);
-                            double feq_du_a = calculate_feq(l, species[a][i][j][k].rho, velocity_du, theta, corr_zero);
+                            double feq_du_a = calculate_feq(l, species[a][i][j][k].rho, velocity_du, theta, corr);
                             #ifdef REACTION
                             double freact_a = calculate_feq(l, rho_a[a], velocity_mix, theta, corr_zero);
                             #endif
@@ -383,8 +389,9 @@ void LBM::Collide_Species()
                                 species[a][i][j][k].fpc[l] = species[a][i][j][k].f[l] + omega_a[a]*(feq_a-species[a][i][j][k].f[l]) + (feq_du_a - feq_a) + freact_a;
 
                         }
-
                     }
+
+                  
 
                 }
             }
