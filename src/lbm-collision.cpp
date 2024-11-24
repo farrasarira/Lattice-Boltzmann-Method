@@ -252,7 +252,7 @@ void LBM::Collide_Species()
                         do{
                             kinetics->getNetProductionRates(&w_dot[0]); 
                             for (size_t a = 0; a < nSpecies; ++a){                                    
-                                double rho_dot = units.rho_dot(w_dot[a] * gas->molecularWeight(a));
+                                double rho_dot = units.rho_dot(w_dot[a] * mmass[a]);
                                 rho_a[a] += dt_sim/maxIter * rho_dot;
                             }
                     
@@ -262,6 +262,12 @@ void LBM::Collide_Species()
                             gas->setState_UV(units.si_energy_mass(internalEnergy), 1.0/units.si_rho(mixture[i][j][k].rho),1.0e-15);
                             p++;
                         }while(p < maxIter);
+
+                        std::vector <double> part_enthalpy(gas->nSpecies());
+                        gas->getPartialMolarEnthalpies(&part_enthalpy[0]);
+                        mixture[i][j][k].HRR = 0.0;
+                        for (size_t a = 0; a < nSpecies; ++a)
+                            mixture[i][j][k].HRR += -1.0 * (part_enthalpy[a] / mmass[a] * rho_a[a]);
                     #endif
 
                     // Viscosity -----------------------------------------------------------------------------------------------------------------------------                    
