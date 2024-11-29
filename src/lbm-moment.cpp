@@ -11,7 +11,7 @@ void LBM::calculate_moment()
     std::vector<std::vector<std::vector<double>>> dQdevy(Nx, std::vector<std::vector<double>>(Ny, std::vector<double>(Nz)));
     std::vector<std::vector<std::vector<double>>> dQdevz(Nx, std::vector<std::vector<double>>(Ny, std::vector<double>(Nz)));
     #ifdef PARALLEL 
-    #pragma omp parallel for schedule(static, 1) 
+    #pragma omp parallel for schedule(dynamic) 
     #endif
     for (int i = 0; i < Nx; ++i){
         for (int j = 0; j < Ny; ++j){
@@ -88,7 +88,7 @@ void LBM::calculate_moment()
 void LBM::calculate_moment()
 {
     #ifdef PARALLEL 
-    #pragma omp parallel for schedule(static, 1) 
+    #pragma omp parallel for schedule(dynamic) 
     #endif
     for (int i = 0; i < Nx; ++i){
         for (int j = 0; j < Ny; ++j){

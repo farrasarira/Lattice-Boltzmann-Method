@@ -3,7 +3,7 @@
 void LBM::Streaming()
 {
     #ifdef PARALLEL 
-        #pragma omp parallel for schedule(static, 1) 
+        #pragma omp parallel for schedule(dynamic) 
     #endif
     for(int i=0; i<Nx; ++i)
     {

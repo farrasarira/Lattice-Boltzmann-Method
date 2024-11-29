@@ -8,7 +8,7 @@
 void LBM::Init()
 {
     #ifdef PARALLEL 
-        #pragma omp parallel for schedule(static, 1) 
+        #pragma omp parallel for schedule(dynamic) 
     #endif
     for(int i = 0; i < Nx ; ++i)
     {
@@ -66,7 +66,7 @@ void LBM::Init()
 void LBM::Init()
 {
     #ifdef PARALLEL 
-        #pragma omp parallel for schedule(static, 1) 
+        #pragma omp parallel for schedule(dynamic) 
     #endif
     for(int i = 0; i < Nx ; ++i)
     {
@@ -74,7 +74,7 @@ void LBM::Init()
         {
             for(int k = 0; k < Nz; ++k)
             {    
-                if (mixture[i][j][k].type == TYPE_F || mixture[i][j][k].type == TYPE_I || mixture[i][j][k].type == TYPE_O || mixture[i][j][k].type == TYPE_O_C  ) // || mixture[i][j][k].type == TYPE_O     
+                if (mixture[i][j][k].type == TYPE_F || mixture[i][j][k].type == TYPE_I ||  mixture[i][j][k].type == TYPE_I_C || mixture[i][j][k].type == TYPE_O || mixture[i][j][k].type == TYPE_O_C  ) // || mixture[i][j][k].type == TYPE_O     
                 {            
                     // initiate Cantera object
                     int rank = omp_get_thread_num();

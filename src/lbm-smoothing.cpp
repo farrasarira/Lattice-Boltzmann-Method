@@ -98,7 +98,7 @@ void LBM::Smoothing()
     double alpha = 0.1;
 
     #ifdef PARALLEL 
-    #pragma omp parallel for schedule(static, 1) 
+    #pragma omp parallel for schedule(dynamic) 
     #endif
     for(int i = 0; i < Nx; ++i){
         for(int j = 0; j < Ny; ++j){

@@ -9,7 +9,7 @@
 void LBM::Collide()
 {    
      #ifdef PARALLEL 
-        #pragma omp parallel for schedule(static, 1) 
+        #pragma omp parallel for schedule(dynamic) 
     #endif
     
     for(int i = 0; i < Nx ; ++i)
@@ -108,7 +108,7 @@ void LBM::Collide()
     #ifndef ISOTHERM
 
     #ifdef PARALLEL 
-        #pragma omp parallel for schedule(static, 1) 
+        #pragma omp parallel for schedule(dynamic) 
     #endif
     for(int i = 0; i < Nx ; ++i)
     {
@@ -121,8 +121,14 @@ void LBM::Collide()
                     // create Cantera object
                     int rank = omp_get_thread_num();
                     auto gas = sols[rank]->thermo();
+                    double mmass[nSpecies];
+                    size_t idx_species[nSpecies];
+                    for(size_t a = 0; a < nSpecies; ++a){
+                        idx_species[a] = gas->speciesIndex(speciesName[a]);
+                        mmass[a] = gas->molecularWeight(idx_species[a]);
+                    }
                     std::vector <double> Y (gas->nSpecies());
-                    for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = species[a][i][j][k].rho / mixture[i][j][k].rho;
+                    for(size_t a = 0; a < nSpecies; ++a) Y[idx_species[a]] = species[a][i][j][k].rho / mixture[i][j][k].rho;
                     gas->setMassFractions(&Y[0]);
                     gas->setState_TD(units.si_temp(mixture[i][j][k].temp), units.si_rho(mixture[i][j][k].rho));
 
@@ -163,19 +169,17 @@ void LBM::Collide()
                     double q_corr [3] = {0.0, 0.0, 0.0};
                     for (size_t a = 0; a < nSpecies; ++a)
                     {
-                        int speciesIdx = gas->speciesIndex(speciesName[a]);
-                        double mmass = gas->molecularWeight(speciesIdx);
-                        q_diff[0] += omega1/(omega-omega1)  * units.energy_mass(part_enthalpy[speciesIdx]/mmass) * mixture[i][j][k].rho * gas->massFraction(speciesIdx) * (species[a][i][j][k].u-mixture[i][j][k].u);
-                        q_diff[1] += omega1/(omega-omega1)  * units.energy_mass(part_enthalpy[speciesIdx]/mmass) * mixture[i][j][k].rho * gas->massFraction(speciesIdx) * (species[a][i][j][k].v-mixture[i][j][k].v);
-                        q_diff[2] += omega1/(omega-omega1)  * units.energy_mass(part_enthalpy[speciesIdx]/mmass) * mixture[i][j][k].rho * gas->massFraction(speciesIdx) * (species[a][i][j][k].w-mixture[i][j][k].w);
+                        q_diff[0] += omega1/(omega-omega1)  * units.energy_mass(part_enthalpy[idx_species[a]]/mmass[a]) * mixture[i][j][k].rho * gas->massFraction(idx_species[a]) * (species[a][i][j][k].u-mixture[i][j][k].u);
+                        q_diff[1] += omega1/(omega-omega1)  * units.energy_mass(part_enthalpy[idx_species[a]]/mmass[a]) * mixture[i][j][k].rho * gas->massFraction(idx_species[a]) * (species[a][i][j][k].v-mixture[i][j][k].v);
+                        q_diff[2] += omega1/(omega-omega1)  * units.energy_mass(part_enthalpy[idx_species[a]]/mmass[a]) * mixture[i][j][k].rho * gas->massFraction(idx_species[a]) * (species[a][i][j][k].w-mixture[i][j][k].w);
 
                         double dY_x = fd_fuw(species[a][i-1][j][k].rho/mixture[i-1][j][k].rho, species[a][i][j][k].rho/mixture[i][j][k].rho, species[a][i+1][j][k].rho/mixture[i+1][j][k].rho, dx, species[a][i][j][k].u-mixture[i][j][k].u, mixture[i-1][j][k].type, mixture[i+1][j][k].type);
                         double dY_y = fd_fuw(species[a][i][j-1][k].rho/mixture[i][j-1][k].rho, species[a][i][j][k].rho/mixture[i][j][k].rho, species[a][i][j+1][k].rho/mixture[i][j+1][k].rho, dy, species[a][i][j][k].v-mixture[i][j][k].v, mixture[i][j-1][k].type, mixture[i][j+1][k].type);
                         double dY_z = fd_fuw(species[a][i][j][k-1].rho/mixture[i][j][k-1].rho, species[a][i][j][k].rho/mixture[i][j][k].rho, species[a][i][j][k+1].rho/mixture[i][j][k+1].rho, dz, species[a][i][j][k].w-mixture[i][j][k].w, mixture[i][j][k-1].type, mixture[i][j][k+1].type);
 
-                        q_corr[0] += 0.5 * (2.0-omega1)/(omega-omega1) * dt_sim * mixture[i][j][k].p * units.energy_mass(part_enthalpy[speciesIdx]/mmass) * dY_x;//species[a][i][j][k].delYx;
-                        q_corr[1] += 0.5 * (2.0-omega1)/(omega-omega1) * dt_sim * mixture[i][j][k].p * units.energy_mass(part_enthalpy[speciesIdx]/mmass) * dY_y;//species[a][i][j][k].delYy;
-                        q_corr[2] += 0.5 * (2.0-omega1)/(omega-omega1) * dt_sim * mixture[i][j][k].p * units.energy_mass(part_enthalpy[speciesIdx]/mmass) * dY_z;//species[a][i][j][k].delYz;  
+                        q_corr[0] += 0.5 * (2.0-omega1)/(omega-omega1) * dt_sim * mixture[i][j][k].p * units.energy_mass(part_enthalpy[idx_species[a]]/mmass[a]) * dY_x;//species[a][i][j][k].delYx;
+                        q_corr[1] += 0.5 * (2.0-omega1)/(omega-omega1) * dt_sim * mixture[i][j][k].p * units.energy_mass(part_enthalpy[idx_species[a]]/mmass[a]) * dY_y;//species[a][i][j][k].delYy;
+                        q_corr[2] += 0.5 * (2.0-omega1)/(omega-omega1) * dt_sim * mixture[i][j][k].p * units.energy_mass(part_enthalpy[idx_species[a]]/mmass[a]) * dY_z;//species[a][i][j][k].delYz;  
                     }
 
                     double delQdevx, delQdevy, delQdevz;
@@ -213,7 +217,7 @@ void LBM::Collide()
 void LBM::Collide_Species()
 {
     #ifdef PARALLEL 
-        #pragma omp parallel for schedule(static, 1) 
+        #pragma omp parallel for schedule(dynamic) 
     #endif
     for(int i = 0; i < Nx ; ++i)
     {
@@ -225,17 +229,17 @@ void LBM::Collide_Species()
                 {   
                     int rank = omp_get_thread_num();
                     auto gas = sols[rank]->thermo();   
-                    std::vector <double> Y (gas->nSpecies());
-                    for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = (species[a][i][j][k].rho) / mixture[i][j][k].rho;
-                    gas->setMassFractions(&Y[0]);   
-                    gas->setState_TD(units.si_temp(mixture[i][j][k].temp), units.si_rho(mixture[i][j][k].rho));
-
                     double mmass[nSpecies];
                     size_t idx_species[nSpecies];
                     for(size_t a = 0; a < nSpecies; ++a){
                         idx_species[a] = gas->speciesIndex(speciesName[a]);
                         mmass[a] = gas->molecularWeight(idx_species[a]);
                     }
+                    
+                    std::vector <double> Y (gas->nSpecies());
+                    for(size_t a = 0; a < nSpecies; ++a) Y[idx_species[a]] = species[a][i][j][k].rho / mixture[i][j][k].rho;
+                    gas->setMassFractions(&Y[0]);   
+                    gas->setState_TD(units.si_temp(mixture[i][j][k].temp), units.si_rho(mixture[i][j][k].rho));
                                         
                     // Reaction ---------------------------------------------------------------------------------------------------------------------------
                     #ifdef REACTION
@@ -257,7 +261,7 @@ void LBM::Collide_Species()
                             }
                     
                             std::fill(Y.begin(), Y.end(), 0.0);
-                            for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = (species[a][i][j][k].rho+rho_a[a]) / mixture[i][j][k].rho;
+                            for(size_t a = 0; a < nSpecies; ++a) Y[idx_species[a]] = (species[a][i][j][k].rho+rho_a[a]) / mixture[i][j][k].rho;
                             gas->setMassFractions(&Y[0]);
                             gas->setState_UV(units.si_energy_mass(internalEnergy), 1.0/units.si_rho(mixture[i][j][k].rho),1.0e-15);
                             p++;
@@ -272,7 +276,7 @@ void LBM::Collide_Species()
 
                     // Viscosity -----------------------------------------------------------------------------------------------------------------------------                    
                     std::fill(Y.begin(), Y.end(), 0.0);
-                    for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = (species[a][i][j][k].rho) / mixture[i][j][k].rho;
+                    for(size_t a = 0; a < nSpecies; ++a) Y[idx_species[a]] = species[a][i][j][k].rho / mixture[i][j][k].rho;
                     gas->setMassFractions(&Y[0]);
                     gas->setState_TD(units.si_temp(mixture[i][j][k].temp), units.si_rho(mixture[i][j][k].rho));
                     
@@ -298,28 +302,23 @@ void LBM::Collide_Species()
                         }
                     }        
 
-                    for(size_t a = 0; a < nSpecies; ++a){
-                        size_t idx_a = idx_species[a];
-                        
+                    for(size_t a = 0; a < nSpecies; ++a){                        
                         double denom = 0.0;
                         for(size_t b = 0; b < nSpecies; ++b)
                             denom = denom + species[b][i][j][k].X * phi[a][b];
                         
-                        visc_a[a] = species[a][i][j][k].X * units.mu(spec_visc[idx_a]) / denom;
+                        visc_a[a] = species[a][i][j][k].X * units.mu(spec_visc[idx_species[a]]) / denom;
                         omega_a[a] = 2*species[a][i][j][k].X*mixture[i][j][k].p*dt_sim / (species[a][i][j][k].X*mixture[i][j][k].p*dt_sim + 2*visc_a[a]);
                     }               
 
-                    // std::cout << visc_a[1] << " | " << units.mu(trans->viscosity()) << std::endl; 
-
-                    // Diffusion ----------------------------------------------------------------------------------------------------------------------------
-                                        
+                    // Diffusion ----------------------------------------------------------------------------------------------------------------------------          
                     double D_ab[nSpecies][nSpecies];
                     for(size_t a = 0; a < nSpecies; ++a)
                     {                       
                         for(size_t b = 0; b <= a; ++b)
                         {
                             // get diffusion coefficient
-                            D_ab[a][b] =  units.nu( d[ld*gas->speciesIndex(speciesName[b]) + gas->speciesIndex(speciesName[a])] );
+                            D_ab[a][b] =  units.nu( d[ld*idx_species[b] + idx_species[a]] );
                             D_ab[b][a] =  D_ab[a][b];
                             // std::cout << "D_ab " << gas->speciesName(gas->speciesIndex(speciesName[a])) << "-" << gas->speciesName(gas->speciesIndex(speciesName[b])) << " : " << d[ld*gas->speciesIndex(speciesName[b]) + gas->speciesIndex(speciesName[a])] << std::endl;
                         }
