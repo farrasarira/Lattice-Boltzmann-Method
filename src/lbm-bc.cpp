@@ -365,7 +365,7 @@ void LBM::TMS_BC()
                         for(size_t a = 0; a < nSpecies; ++a) rhoa_out[a] = Y[gas->speciesIndex(speciesName[a])] * rho_out;
                     }
                     else if( mixture[i_bdr][j_bdr][k_bdr].type == TYPE_O_C){
-                        double sigma = 5.0;
+                        double sigma = 0.0;
 
                         int rank = omp_get_thread_num();
                         auto gas = sols[rank]->thermo();   

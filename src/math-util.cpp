@@ -90,6 +90,14 @@ double smooth(double left, double right, double x, double center, double alpha) 
     return left +  0.5 * (1 + std::tanh(alpha * (x - center))) * (right-left);
 }
 
+double smooth2D(double inside, double outside, double x, double y, double core_rad, double alpha) {
+    double rad = sqrt(sq(x) + sq(y));
+    double x_smooth = inside +  0.5 * (1 + std::tanh(alpha * (rad - core_rad))) * (outside-inside);
+    // double y_smooth = inside +  0.5 * (1 + std::tanh(alpha * (y - y_rad))) * (outside-inside);
+
+    return x_smooth;//0.5*(x_smooth+y_smooth);
+}
+
 // calculate ratio of consecutive slopes (theta)
 double calc_ratio_slopes(double stc_n, double stc_c, double stc_p)
 {

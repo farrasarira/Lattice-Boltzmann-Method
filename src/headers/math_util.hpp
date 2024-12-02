@@ -15,6 +15,7 @@
 
     float smootherstep(float, float, float);
     double smooth(double left, double right, double x, double center, double alpha);
+    double smooth2D(double inside, double outside, double x, double y, double core_rad, double alpha);
 
     double calc_ratio_slopes(double stc_n, double stc_c, double stc_p);
     double limiterMinmod(double theta);
