@@ -114,6 +114,51 @@ void LBM::Streaming()
                         }
                     }
                 }
+
+                #ifdef CONJUGATE
+                if(mixture[i][j][k].type==TYPE_S)
+                {
+                    for (int l=0; l < npop; ++l)
+                    {
+                        int i_nb, j_nb, k_nb;
+                        i_nb = i - cx[l];
+                        j_nb = j - cy[l];
+                        k_nb = k - cz[l];
+
+                        //---- Adiabatic Wall --------------------------
+                        if (mixture[i_nb][j_nb][k_nb].type==TYPE_F ){
+                            
+                        }  
+                        else if (mixture[i_nb][j_nb][k_nb].type==TYPE_A ){
+                            #ifndef ISOTHERM
+                            mixture[i][j][k].g[l] = mixture[i][j][k].gpc[opposite[l]];
+                            #endif
+                        }                                 
+                        else //---- Periodic Boundary Condition --------------------
+                        {
+                            // if (i_nb < 1) i_nb = Nx-2;
+                            // else if(i_nb > Nx-2) i_nb = 1;
+
+                            // if (j_nb < 1) j_nb = Ny-2;
+                            // else if(j_nb > Ny-2) j_nb = 1;
+
+                            // if (k_nb < 1) k_nb = Nz-2;
+                            // else if(k_nb > Nz-2) k_nb = 1;
+
+
+                            
+                            i_nb = ((i_nb - 1 + (Nx-2)) % (Nx-2)) + 1;
+                            j_nb = ((j_nb - 1 + (Ny-2)) % (Ny-2)) + 1;
+                            k_nb = ((k_nb - 1 + (Nz-2)) % (Nz-2)) + 1;
+
+                            #ifndef ISOTHERM
+                            mixture[i][j][k].g[l] = mixture[i_nb][j_nb][k_nb].gpc[l];          
+                            #endif                
+                        }
+                    }
+                }
+                #endif
+
             }
         }
     }

@@ -92,7 +92,7 @@
 #include "lbm.hpp"
 #include "FD.hpp"
 
-
+#ifdef MULTICOMP
 void LBM::Smoothing()
 {
     double alpha = 0.1;
@@ -119,7 +119,7 @@ void LBM::Smoothing()
                         if(k-1 >=0 && k+1 < Nz)   
                             dXa_dz = fd_central(species[a][i][j][k-1].X, species[a][i][j][k].X, species[a][i][j][k+1].X, dx, species[a][i][j][k].w, mixture[i][j][k-1].type, mixture[i][j][k+1].type) ;
 
-                        if (abs(dXa_dx) > dX_threshold || abs(dXa_dy) > dX_threshold || abs(dXa_dz) > dX_threshold){
+                        if (true){ //(abs(dXa_dx) > dX_threshold || abs(dXa_dy) > dX_threshold || abs(dXa_dz) > dX_threshold){
                         // if (species[a][i][j][k].X < dX_threshold){
                             // std::cout <<  i << " " << j << " " << k << " " << a << " | " << dXa_dx << " " << dXa_dy << " " << dXa_dz << std::endl;
                             for(size_t l = 0; l < npop; ++l){
@@ -170,3 +170,4 @@ void LBM::Smoothing()
     }
 
 }
+#endif

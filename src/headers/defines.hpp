@@ -46,12 +46,16 @@
     // #define PREMIXED_JET_FLAME
     // #define MICROCHANNEL_FLAME
     #define CIRCULAR_FLAME
+    // #define HEATED_OBSTACLE
 
     // ################ ISOTHERMAL ###################
     // #define ISOTHERM
 
     // ################# REACTION ####################
     #define REACTION
+
+    // ##### CONJUGATE HEAT TRANSFER FLUID-SOLID #####
+    // #define CONJUGATE
     
     // ################ SMOOTHING ####################
     // #define SMOOTHING
@@ -67,6 +71,9 @@
 
     // ############### OUTPUT UNIT ###################
     // #define OUTPUT_SI               // uncomment for SI UNIT, comment for LATTICE UNIT
+
+    // ########### RESTART FILE METHOD ###############
+    // #define RESTART_O_DIRECT         // For fast computation but cannot be used for large file
 
     // ############### Limiter Type ##################
     #define LIMITER_TYPE limiterVanleer
@@ -92,7 +99,7 @@
     #elif defined AA
         #define D2Q9
         #define NDIM 2
-    #elif defined TAYLOR_GREEN_2D || defined TAYLOR_GREEN_3D || defined CHANNEL_FLOW_3D || defined CYLINDER_3D || defined VISCOSITY_TEST || defined CONDUCTIVITY_TEST || defined SOUNDSPEED_TEST || defined SOD_SHOCK || defined TERNARY_DIFFUSION || defined SOD_SHOCK_SIUNIT || defined SHEAR_LAYER_MULTICOMP || defined PERFECTLY_STIRRED_REACTOR_3D || defined CYLINDER_2D || defined CONDUCTION_1D || defined BPVT_1 || defined COUETTE_FLOW || defined COUETTE_FLOW_MULTICOMP || defined TAYLOR_GREEN_3D_MULTICOMP || defined SHEAR_LAYER || defined SHOCK_VORTEX_INTERAC || defined RB_INSTABILITY || defined CONDUCTION_BLACK || defined RB_INSTABILITY_MULTICOMP || defined VISCOSITY_TEST_MULTICOMP || defined VISCOSITY_TEST_ROTATED || defined OPPOSED_JET || defined POINT_COMBUSTION_2D || defined FLAME_SPEED || defined PREMIXED_LAMINAR_FLAME_2D || defined OPPOSED_JET_MULTICOMP || defined CONVECTED_VORTEX || defined COFLOW_FLAME || defined OPPOSED_JET_FLAME || defined PREMIXED_JET_FLAME || defined MICROCHANNEL_FLAME || defined CIRCULAR_FLAME
+    #elif defined TAYLOR_GREEN_2D || defined TAYLOR_GREEN_3D || defined CHANNEL_FLOW_3D || defined CYLINDER_3D || defined VISCOSITY_TEST || defined CONDUCTIVITY_TEST || defined SOUNDSPEED_TEST || defined SOD_SHOCK || defined TERNARY_DIFFUSION || defined SOD_SHOCK_SIUNIT || defined SHEAR_LAYER_MULTICOMP || defined PERFECTLY_STIRRED_REACTOR_3D || defined CYLINDER_2D || defined CONDUCTION_1D || defined BPVT_1 || defined COUETTE_FLOW || defined COUETTE_FLOW_MULTICOMP || defined TAYLOR_GREEN_3D_MULTICOMP || defined SHEAR_LAYER || defined SHOCK_VORTEX_INTERAC || defined RB_INSTABILITY || defined CONDUCTION_BLACK || defined RB_INSTABILITY_MULTICOMP || defined VISCOSITY_TEST_MULTICOMP || defined VISCOSITY_TEST_ROTATED || defined OPPOSED_JET || defined POINT_COMBUSTION_2D || defined FLAME_SPEED || defined PREMIXED_LAMINAR_FLAME_2D || defined OPPOSED_JET_MULTICOMP || defined CONVECTED_VORTEX || defined COFLOW_FLAME || defined OPPOSED_JET_FLAME || defined PREMIXED_JET_FLAME || defined MICROCHANNEL_FLAME || defined CIRCULAR_FLAME || defined HEATED_OBSTACLE
         #define D3Q27
         #define NDIM 3
     #endif
@@ -102,15 +109,18 @@
     #endif
 
     // ############## Boundary Condition ###############
-    #define TYPE_F 0 // fluid domain
-    #define TYPE_P 1 // periodic boundary
-    #define TYPE_S 2 // dirichlet boundary condition
-    #define TYPE_A 3 // Adiabatic No-Slip Wall
-    #define TYPE_FS 4  // Adiabatic Free-Slip Wall
-    #define TYPE_I 5 // Inflow boundary condition
-    #define TYPE_O 6 // Outflow boundary condition (Neumann Boundary Condition | Zero gradient for all variables)
-    #define TYPE_I_C 7 // Inflow boundary condition
-    #define TYPE_O_C 8 // Outflow boundary condition (Neumann Boundary Condition | Zero gradient for all variables)
+    #define TYPE_F 0    // fluid domain
+    #define TYPE_S 1    // dirichlet boundary condition
+    #define TYPE_P 2    // periodic boundary
+    #define TYPE_A 3    // Adiabatic No-Slip Wall
+    #define TYPE_FS 4   // Adiabatic Free-Slip Wall
+    #define TYPE_I 5    // Inflow boundary condition
+    #define TYPE_O 6    // Outflow boundary condition (Neumann Boundary Condition | Zero gradient for all variables)
+    #define TYPE_I_C 7  // Inflow boundary condition
+    #define TYPE_O_C 8  // Outflow boundary condition (Neumann Boundary Condition | Zero gradient for all variables)
+    #define TYPE_Q 9    // Heat boundary condition
+
+
 
     
 

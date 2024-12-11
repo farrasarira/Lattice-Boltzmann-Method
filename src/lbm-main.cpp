@@ -138,10 +138,7 @@ void LBM::loop(int nstep, int tout)
         TMS_BC();
         // std::cout << "  Apply BC Done" << std::endl;  
         // std::cout << "TMS BC                : " << double(omp_get_wtime()-start) << " seconds" << std::endl;
-        
-        // fill_BC();
-        // std::cout << "  Fill BC Done" << std::endl;
-        
+                
         // start = omp_get_wtime();
         #ifdef SMOOTHING
             calculate_moment_smoothing(); // calculate moment
@@ -156,7 +153,7 @@ void LBM::loop(int nstep, int tout)
             OutputVTK(step, this);      // Save the macroscopic quantity
             OutputKeEns(step, this);
         }
-        if (step % (1000*tout) == 0)
+        if (step % (20*tout) == 0)
             write_restart(step, this);
 
     }

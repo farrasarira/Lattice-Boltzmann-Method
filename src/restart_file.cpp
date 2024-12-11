@@ -8,6 +8,10 @@
 #include <cstdlib>     // For posix_memalign
 #include <sys/stat.h>  // For fstat
 
+#include <fstream>
+#include <string>
+
+#ifdef RESTART_O_DIRECT
 // Write restart file subroutine
 void write_restart(int &step, LBM *lbm)
 {
@@ -111,7 +115,7 @@ void write_restart(int &step, LBM *lbm)
         close(fd);
     }
 
-    // std::cout << "Wrote " << bytesWritten << std::endl;
+    std::cout << "Wrote " << bytesWritten << std::endl;
 
     // Cleanup
     free(buffer); // Free the aligned memory
@@ -124,16 +128,16 @@ void write_restart(int &step, LBM *lbm)
 LBM read_restart(const std::string& filename)
 {
 
+    // Define block_size
+    const size_t blockSize = 512;  // Example block size, this may vary
+    const size_t chunkSize = 512 * 1024 * 1024;
+    const size_t dataSize = (chunkSize/blockSize + 1)*blockSize;  // Write 4096 bytes (8 blocks of 512 bytes)
+
     // Open the file with O_DIRECT for direct I/O
     int fd = open(filename.c_str(), O_RDONLY | O_DIRECT);
     if (fd < 0) {
         std::cerr << "Failed to open file: " << strerror(errno) << std::endl;
     }
-
-    // Define block_size
-    const size_t blockSize = 512;  // Example block size, this may vary
-    const size_t fileSize = getFileSize(fd);
-    const size_t dataSize = (fileSize/blockSize + 1)*blockSize;  // Write 4096 bytes (8 blocks of 512 bytes)
 
     // Allocate aligned memory for O_DIRECT
     char *buffer;
@@ -150,17 +154,19 @@ LBM read_restart(const std::string& filename)
         free(buffer);
         close(fd);
     }
+
+    // Start reading data from the buffer
+    size_t offset = 0;
      
     // Get scalar data first from buffer
-    int dx;     memcpy(&dx,     buffer,                   sizeof(int)); 
-    int dy;     memcpy(&dy,     buffer + sizeof(int),     sizeof(int)); 
-    int dz;     memcpy(&dz,     buffer + 2 * sizeof(int), sizeof(int)); 
-    int Nx;     memcpy(&Nx,     buffer + 3 * sizeof(int), sizeof(int));
-    int Ny;     memcpy(&Ny,     buffer + 4 * sizeof(int), sizeof(int));
-    int Nz;     memcpy(&Nz,     buffer + 5 * sizeof(int), sizeof(int));
-    int dt_sim; memcpy(&dt_sim, buffer + 6 * sizeof(int), sizeof(int)); 
-    int step;   memcpy(&step,   buffer + 7 * sizeof(int), sizeof(int)); 
-    unsigned long size_scalar_int = 8 * sizeof(int);
+    int dx;     memcpy(&dx,     buffer + offset, sizeof(int)); offset += sizeof(int);
+    int dy;     memcpy(&dy,     buffer + offset, sizeof(int)); offset += sizeof(int);
+    int dz;     memcpy(&dz,     buffer + offset, sizeof(int)); offset += sizeof(int);
+    int Nx;     memcpy(&Nx,     buffer + offset, sizeof(int)); offset += sizeof(int);
+    int Ny;     memcpy(&Ny,     buffer + offset, sizeof(int)); offset += sizeof(int);
+    int Nz;     memcpy(&Nz,     buffer + offset, sizeof(int)); offset += sizeof(int);
+    int dt_sim; memcpy(&dt_sim, buffer + offset, sizeof(int)); offset += sizeof(int);
+    int step;   memcpy(&step,   buffer + offset, sizeof(int)); offset += sizeof(int);
     
     // create LBM object
     #ifndef MULTICOMP
@@ -199,22 +205,26 @@ LBM read_restart(const std::string& filename)
 
 
     #else
-        size_t nSpecies;                        memcpy(&nSpecies     , buffer + size_scalar_int                     , sizeof(size_t)        );
-        std::vector<std::string> speciesName;
 
-        unsigned long size_scalar_species = sizeof(size_t);
-        for (size_t a = 0; a < nSpecies; ++a){
+        size_t nSpecies;
+        memcpy(&nSpecies, buffer + offset, sizeof(size_t)); offset += sizeof(size_t);
+
+        std::vector<std::string> speciesName(nSpecies);
+        for (size_t a = 0; a < nSpecies; ++a) {
             size_t size_species_a;
-            memcpy(&size_species_a, buffer + size_scalar_int + size_scalar_species                  , sizeof(size_t));
-            std::string speciesName_a (buffer + size_scalar_int + size_scalar_species + sizeof(size_t) , size_species_a);
-            speciesName.push_back(speciesName_a);
-            size_scalar_species += sizeof(size_t) + size_species_a;
+            memcpy(&size_species_a, buffer + offset, sizeof(size_t)); offset += sizeof(size_t);
+
+            char *speciesBuffer = new char[size_species_a + 1];
+            memcpy(speciesBuffer, buffer + offset, size_species_a); offset += size_species_a;
+            speciesBuffer[size_species_a] = '\0'; // Null-terminate the string
+
+            speciesName[a] = std::string(speciesBuffer);
+            delete[] speciesBuffer;
         }
 
-        double permeability;                    memcpy(&permeability, buffer + size_scalar_int + size_scalar_species, sizeof(double));
-        size_scalar_species += sizeof(double);
+        double permeability;                    memcpy(&permeability, buffer + offset, sizeof(double)); offset += sizeof(double);
 
-        unsigned long size_scalar = size_scalar_int + size_scalar_species;
+
 
         LBM lb(Nx-2, Ny-2, Nz-2, speciesName);
         lb.set_dx(dx);
@@ -224,19 +234,17 @@ LBM read_restart(const std::string& filename)
         lb.set_step(step);
         lb.set_permeability(permeability);
 
-        unsigned long size_field = 0;
         for (int i = 0; i < Nx; ++i){
             for (int j = 0; j < Ny; ++j){
                 for (int k = 0; k < Nz; ++k){
                     // Read mixture data
-                    memcpy( &lb.mixture[i][j][k], buffer + size_scalar + size_field, sizeof(MIXTURE));
-                    size_field += sizeof(MIXTURE);
+                    memcpy( &lb.mixture[i][j][k], buffer + offset, sizeof(MIXTURE)); offset += sizeof(MIXTURE);
 
                     // Read species data
                     for (size_t a = 0; a < nSpecies; ++a){
-                        memcpy( &lb.species[a][i][j][k], buffer + size_scalar + size_field, sizeof(SPECIES));
-                        size_field += sizeof(SPECIES);
-                }
+                        memcpy( &lb.species[a][i][j][k], buffer + offset, sizeof(SPECIES)); offset += sizeof(SPECIES);
+                    }
+
                 }
             }
         }
@@ -246,7 +254,7 @@ LBM read_restart(const std::string& filename)
     // Clean up and close the file
     free(buffer);
     close(fd);
-    // std::cout << "Restart file read successfully!" << std::endl;
+    std::cout << "Restart file read successfully!" << std::endl;
 
     return lb;
 }
@@ -260,3 +268,175 @@ size_t getFileSize(int fd) {
         return -1;  // Error case
     }
 }
+
+#else
+
+void write_restart(int &step, LBM *lbm) {
+    LBM lb = *lbm;
+
+    // Create name of file
+    char filename[128];
+    sprintf(filename, "./restart%06d.dat", step);
+
+    // Open file in binary mode
+    std::ofstream outFile(filename, std::ios::binary);
+    if (!outFile) {
+        throw std::runtime_error("Failed to open file: " + std::string(filename));
+    }
+
+    // Write scalar data
+    int dx = lb.get_dx(), dy = lb.get_dy(), dz = lb.get_dz();
+    int Nx = lb.get_Nx(), Ny = lb.get_Ny(), Nz = lb.get_Nz();
+    int dt_sim = lb.get_dtsim();
+
+    outFile.write(reinterpret_cast<char*>(&dx), sizeof(dx));
+    outFile.write(reinterpret_cast<char*>(&dy), sizeof(dy));
+    outFile.write(reinterpret_cast<char*>(&dz), sizeof(dz));
+    outFile.write(reinterpret_cast<char*>(&Nx), sizeof(Nx));
+    outFile.write(reinterpret_cast<char*>(&Ny), sizeof(Ny));
+    outFile.write(reinterpret_cast<char*>(&Nz), sizeof(Nz));
+    outFile.write(reinterpret_cast<char*>(&dt_sim), sizeof(dt_sim));
+    outFile.write(reinterpret_cast<char*>(&step), sizeof(step));
+
+#ifndef MULTICOMP
+    // Write double scalar data
+    double nu = lb.get_nu(), gas_const = lb.get_gasconst(), gamma = lb.get_gamma();
+    double Ra = lb.get_Ra(), prtl = lb.get_prtl();
+
+    outFile.write(reinterpret_cast<char*>(&nu), sizeof(nu));
+    outFile.write(reinterpret_cast<char*>(&gas_const), sizeof(gas_const));
+    outFile.write(reinterpret_cast<char*>(&gamma), sizeof(gamma));
+    outFile.write(reinterpret_cast<char*>(&Ra), sizeof(Ra));
+    outFile.write(reinterpret_cast<char*>(&prtl), sizeof(prtl));
+
+    // Write mixture data
+    for (int i = 0; i < Nx; ++i) {
+        for (int j = 0; j < Ny; ++j) {
+            for (int k = 0; k < Nz; ++k) {
+                outFile.write(reinterpret_cast<char*>(&lb.mixture[i][j][k]), sizeof(MIXTURE));
+            }
+        }
+    }
+#else
+    size_t nSpecies = lb.get_nSpecies();
+    outFile.write(reinterpret_cast<char*>(&nSpecies), sizeof(nSpecies));
+
+    // Write species names
+    std::vector<std::string> speciesName = lb.get_speciesName();
+    for (const auto &name : speciesName) {
+        size_t size_species_a = name.size();
+        outFile.write(reinterpret_cast<char*>(&size_species_a), sizeof(size_species_a));
+        outFile.write(name.c_str(), size_species_a);
+    }
+
+    double permeability = lb.get_permeability();
+    outFile.write(reinterpret_cast<char*>(&permeability), sizeof(permeability));
+
+    // Write mixture and species data
+    for (int i = 0; i < Nx; ++i) {
+        for (int j = 0; j < Ny; ++j) {
+            for (int k = 0; k < Nz; ++k) {
+                outFile.write(reinterpret_cast<char*>(&lb.mixture[i][j][k]), sizeof(MIXTURE));
+                for (size_t a = 0; a < nSpecies; ++a) {
+                    outFile.write(reinterpret_cast<char*>(&lb.species[a][i][j][k]), sizeof(SPECIES));
+                }
+            }
+        }
+    }
+#endif
+
+    outFile.close();
+    std::cout << "Restart file written successfully!" << std::endl;
+}
+
+LBM read_restart(const std::string& filename) {
+    std::ifstream inFile(filename, std::ios::binary);
+    if (!inFile) {
+        throw std::runtime_error("Failed to open file: " + filename);
+    }
+
+    // Read scalar data
+    int dx, dy, dz, Nx, Ny, Nz, dt_sim, step;
+    inFile.read(reinterpret_cast<char*>(&dx), sizeof(dx));
+    inFile.read(reinterpret_cast<char*>(&dy), sizeof(dy));
+    inFile.read(reinterpret_cast<char*>(&dz), sizeof(dz));
+    inFile.read(reinterpret_cast<char*>(&Nx), sizeof(Nx));
+    inFile.read(reinterpret_cast<char*>(&Ny), sizeof(Ny));
+    inFile.read(reinterpret_cast<char*>(&Nz), sizeof(Nz));
+    inFile.read(reinterpret_cast<char*>(&dt_sim), sizeof(dt_sim));
+    inFile.read(reinterpret_cast<char*>(&step), sizeof(step));
+
+#ifndef MULTICOMP
+    // Read double scalar data
+    double nu, gas_const, gamma, Ra, prtl;
+    inFile.read(reinterpret_cast<char*>(&nu), sizeof(nu));
+    inFile.read(reinterpret_cast<char*>(&gas_const), sizeof(gas_const));
+    inFile.read(reinterpret_cast<char*>(&gamma), sizeof(gamma));
+    inFile.read(reinterpret_cast<char*>(&Ra), sizeof(Ra));
+    inFile.read(reinterpret_cast<char*>(&prtl), sizeof(prtl));
+
+    // Initialize LBM object
+    LBM lb(Nx - 2, Ny - 2, Nz - 2, nu);
+    lb.set_dx(dx);
+    lb.set_dy(dy);
+    lb.set_dz(dz);
+    lb.set_dtsim(dt_sim);
+    lb.set_step(step);
+    lb.set_gasconst(gas_const);
+    lb.set_gamma(gamma);
+    lb.set_Ra(Ra);
+    lb.set_prtl(prtl);
+
+    // Read mixture data
+    for (int i = 0; i < Nx; ++i) {
+        for (int j = 0; j < Ny; ++j) {
+            for (int k = 0; k < Nz; ++k) {
+                inFile.read(reinterpret_cast<char*>(&lb.mixture[i][j][k]), sizeof(MIXTURE));
+            }
+        }
+    }
+#else
+    size_t nSpecies;
+    inFile.read(reinterpret_cast<char*>(&nSpecies), sizeof(nSpecies));
+
+    std::vector<std::string> speciesName(nSpecies);
+    for (size_t a = 0; a < nSpecies; ++a) {
+        size_t size_species_a;
+        inFile.read(reinterpret_cast<char*>(&size_species_a), sizeof(size_species_a));
+
+        std::string speciesBuffer(size_species_a, '\0');
+        inFile.read(&speciesBuffer[0], size_species_a);
+        speciesName[a] = speciesBuffer;
+    }
+
+    double permeability;
+    inFile.read(reinterpret_cast<char*>(&permeability), sizeof(permeability));
+
+    // Initialize LBM object
+    LBM lb(Nx - 2, Ny - 2, Nz - 2, speciesName);
+    lb.set_dx(dx);
+    lb.set_dy(dy);
+    lb.set_dz(dz);
+    lb.set_dtsim(dt_sim);
+    lb.set_step(step);
+    lb.set_permeability(permeability);
+
+    // Read mixture and species data
+    for (int i = 0; i < Nx; ++i) {
+        for (int j = 0; j < Ny; ++j) {
+            for (int k = 0; k < Nz; ++k) {
+                inFile.read(reinterpret_cast<char*>(&lb.mixture[i][j][k]), sizeof(MIXTURE));
+                for (size_t a = 0; a < nSpecies; ++a) {
+                    inFile.read(reinterpret_cast<char*>(&lb.species[a][i][j][k]), sizeof(SPECIES));
+                }
+            }
+        }
+    }
+#endif
+
+    inFile.close();
+    std::cout << "Restart file read successfully!" << std::endl;
+    return lb;
+}
+
+#endif

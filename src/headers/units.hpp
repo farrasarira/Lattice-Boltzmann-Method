@@ -83,7 +83,7 @@
         inline float u(const float si_u) const { return si_u*s/m; } // velocity si_u = u*[m/s]
         inline float rho(const float si_rho) const { return si_rho*cb(m)/kg; } // density si_rho = rho*[kg/m^3]
         // float rho_u(const float si_rho_u) const { return si_rho_u* cb(m)/kg * s/m; } // mass flux si_rho_u = rho_u
-        inline float rho_dot(const float si_rho) const { return si_rho*cb(m)*s/kg; } // density si_rho_dot = rho*[kg/m^3/s]
+        inline float rho_dot(const float si_rho_dot) const { return si_rho_dot*cb(m)*s/kg; } // density si_rho_dot = rho*[kg/m^3/s]
         // float Q(const float si_Q) const { return si_Q*s/cb(m); } // flow rate si_Q = Q*[m^3/s]
         inline float nu(const float si_nu) const { return si_nu*s/sq(m); } // kinematic shear viscosity si_nu = nu*[m^2/s]
         inline float mu(const float si_mu) const { return si_mu*s*m/kg; } // dynamic shear viscosity si_mu = mu*[kg/(m*s)]
@@ -100,7 +100,7 @@
         // float bin_diff(const float si_bin_diff) const { return si_bin_diff * s / (m*m); } // pressure 
         // float diff_coeff(const float si_dif_coeff) const { return si_dif_coeff*s/sq(m); } // diffusion coefficient si_nu = nu*[m^2/s]
         inline float permeability(const float si_K) const { return si_K/sq(m); } // permeability K
-        inline float HRR(const float si_HRR) const { return si_HRR / (kg/(m*cb(s))); } // Heat Relese Rate 
+        inline float HRR(const float si_HRR) const { return si_HRR / (kg/(sq(m)*cb(s))); } // Heat Relese Rate 
 
 
         
@@ -111,7 +111,7 @@
         // float si_t(const unsigned long t) const { return (float)t*s; } // time si_t = t*[s]
         inline float si_temp(const float temp) const {return temp*K;} // temperature
         inline float si_energy_mass(const float energy_mass) const {return energy_mass * (m*m)/(s*s);}
-        inline float si_energy(const float energy_mass) const {return energy_mass * kg*(m*m)/(s*s);}
+        inline float si_energy(const float energy_mass) const {return energy_mass * kg *(m*m)/(s*s);}
         // float si_mu(const float mu) const {return mu * kg / (m * s) ;} // dynamic viscosity
         // float si_frequency(const float frequency) const { return frequency/s; } // frequency si_frequency = frequency*[1/s]
         // float si_V(const float V) const { return V*cb(m); } // volume si_V = V*[m^3]
@@ -125,7 +125,7 @@
         // float si_F(const float F) const { return F*kg*m/sq(s); } // force si_F = F*[kg*m/s^2]
         // float si_T(const float T) const { return T*kg*sq(m)/sq(s); } // torque si_T = T*[kg*m^2/s^2]
         // float si_sigma(const float sigma) const { return sigma*kg/sq(s); } // surface tension si_sigma = sigma*[kg/s^2]
-        inline float si_HRR(const float HRR) const { return HRR * (kg/(m*cb(s))); } // Heat Relese Rate  
+        inline float si_HRR(const float HRR) const { return HRR * (kg/(sq(m)*cb(s))); } // Heat Relese Rate  
 
 
         // // other conversions in simulation units (can be called before set_m_kg_s(...);)

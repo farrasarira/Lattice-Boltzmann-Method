@@ -13,8 +13,10 @@ void OutputVTK(int &nout, LBM *lbm)
     int Ny = lb.get_Ny();
     int Nz = lb.get_Nz();
 	int dx = lb.get_dx();
+	#ifdef MULTICOMP
 	int nSpecies = lb.get_nSpecies();
 	std::vector<std::string> speciesName = lb.get_speciesName();
+	#endif
 	int		i,j,k;
 	char	filename[128];
 	FILE	*fp;
@@ -38,12 +40,14 @@ void OutputVTK(int &nout, LBM *lbm)
 	fprintf(fp,"      <DataArray type=\"Float32\" Name=\"CellType\" format=\"appended\" offset=\"%ld\" />\n",offset); offset+=4+1*4*(Nx)*(Ny)*(Nz);
 	fprintf(fp,"      <DataArray type=\"Float32\" Name=\"Temperature\" format=\"appended\" offset=\"%ld\" />\n",offset); offset+=4+1*4*(Nx)*(Ny)*(Nz);
 	fprintf(fp,"      <DataArray type=\"Float32\" Name=\"Pressure\" format=\"appended\" offset=\"%ld\" />\n",offset); offset+=4+1*4*(Nx)*(Ny)*(Nz);
+	#ifdef MULTICOMP
 	fprintf(fp,"      <DataArray type=\"Float32\" Name=\"HRR\" format=\"appended\" offset=\"%ld\" />\n",offset); offset+=4+1*4*(Nx)*(Ny)*(Nz);
 	for (int a = 0; a < nSpecies ; ++a) 
 		{fprintf(fp,"      <DataArray type=\"Float32\" Name=\"Mole Fraction %s\" format=\"appended\" offset=\"%ld\" />\n", speciesName[a].c_str(), offset); offset+=4+1*4*(Nx)*(Ny)*(Nz);}
 
 	for (int a = 0; a < nSpecies ; ++a) 
 		{fprintf(fp,"      <DataArray type=\"Float32\" Name=\"Species Velocity %s\" format=\"appended\" offset=\"%ld\" />\n", speciesName[a].c_str(), offset); offset+=4+1*4*(Nx)*(Ny)*(Nz);}
+	#endif
 	fprintf(fp,"    </CellData>\n");
 	fprintf(fp,"    <Coordinates>\n");
 	fprintf(fp,"      <DataArray type=\"Float32\" Name=\"CoordinateX\" format=\"appended\" offset=\"%ld\" />\n",offset); offset+=4+1*4*(Nx+1);

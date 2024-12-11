@@ -243,7 +243,9 @@
             void set_Nz(int Nz){this->Nz = Nz;};
             void set_dtsim(int dt_sim){this->dt_sim = dt_sim;};
             void set_step(int step){this->step = step;};
+            #ifdef MULTICOMP
             void set_permeability(double permeability){this->permeability = permeability;};
+            #endif
 
             #ifndef MULTICOMP
                 void set_nu(double nu){this->nu = nu;};
