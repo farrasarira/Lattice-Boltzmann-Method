@@ -121,38 +121,40 @@ void LBM::Collide()
                     double internal_energy = mixture[i][j][k].rhoe / mixture[i][j][k].rho - 0.5 * v_sqr(velocity[0], velocity[1], velocity[2]);
                     #endif
                     double eq_p_tensor[3][3] = {0.};
-                    // double eq_R_tensor[3][3] = {{0., 0., 0.},    // second-order moment of g
-                    //                             {0., 0., 0.},
-                    //                             {0., 0., 0.}};
                     
-                    // double enthalpy = cp * mixture[i][j][k].temp; // H = Cp * T = (Cv + 1) * T
-                    // double total_enthalpy = enthalpy + 0.5 * v_sqr(velocity[0], velocity[1], velocity[2]);
-
                     for(int p=0; p < 3; ++p)
-                        for(int q=0; q < 3; ++q){
+                        for(int q=0; q < 3; ++q)
                             eq_p_tensor[p][q] = (p==q) ? mixture[i][j][k].p+mixture[i][j][k].rho*velocity[p]*velocity[q] : mixture[i][j][k].rho*velocity[p]*velocity[q]; 
-                            // eq_R_tensor[p][q] = total_enthalpy*eq_p_tensor[p][q] + mixture[i][j][k].p*velocity[p]*velocity[q];
-                        }
+                            
+                    double q_boundary [3] = {0.0, 0.0, 0.0};
+                    // int i_nb, j_nb, k_nb;
+                    // for (int l=0; l < npop; ++l){
+                    //     i_nb = i - cx[l];
+                    //     j_nb = j - cy[l];
+                    //     k_nb = k - cz[l];
 
-                    // double eq_heat_flux[3] = {  total_enthalpy*mixture[i][j][k].rho*mixture[i][j][k].u,
-                    //                             total_enthalpy*mixture[i][j][k].rho*mixture[i][j][k].v,
-                    //                             total_enthalpy*mixture[i][j][k].rho*mixture[i][j][k].w};
-                    
-                    // double str_heat_flux[3] ={  eq_heat_flux[0] + velocity[0]*(mixture[i][j][k].p_tensor[0][0]-eq_p_tensor[0][0]) + velocity[1]*(mixture[i][j][k].p_tensor[1][0]-eq_p_tensor[1][0]) + velocity[2]*(mixture[i][j][k].p_tensor[2][0]-eq_p_tensor[2][0]) + 0.5*dt_sim*velocity[0]*mixture[i][j][k].dQdevx,   // - 0.5*dt_sim*velocity[0]*mixture[i][j][k].dQdevx
-                    //                             eq_heat_flux[1] + velocity[0]*(mixture[i][j][k].p_tensor[0][1]-eq_p_tensor[0][1]) + velocity[1]*(mixture[i][j][k].p_tensor[1][1]-eq_p_tensor[1][1]) + velocity[2]*(mixture[i][j][k].p_tensor[2][1]-eq_p_tensor[2][1]) + 0.5*dt_sim*velocity[1]*mixture[i][j][k].dQdevy,   // - 0.5*dt_sim*velocity[1]*mixture[i][j][k].dQdevy
-                    //                             eq_heat_flux[2] + velocity[0]*(mixture[i][j][k].p_tensor[0][2]-eq_p_tensor[0][2]) + velocity[1]*(mixture[i][j][k].p_tensor[1][2]-eq_p_tensor[1][2]) + velocity[2]*(mixture[i][j][k].p_tensor[2][2]-eq_p_tensor[2][2]) + 0.5*dt_sim*velocity[2]*mixture[i][j][k].dQdevz} ; // - 0.5*dt_sim*velocity[2]*mixture[i][j][k].dQdevz    
+                    //     if((mixture[i_nb][j_nb][k_nb].type==TYPE_Q ) && mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].type==TYPE_S){    //|| mixture[i_nb][j_nb][k_nb].type==TYPE_Q
+                    //         if (cx[l] != 0)
+                    //             q_boundary[0] = mixture[i_nb][j_nb][k_nb].energy_flux[0];
+                    //         if (cy[l] != 0)
+                    //             q_boundary[1] = mixture[i_nb][j_nb][k_nb].energy_flux[1];
+                    //         if (cz[l] != 0)
+                    //             q_boundary[2] = mixture[i_nb][j_nb][k_nb].energy_flux[2];
+                    //         break;
+                    //     }                            
+                    // }
+                    // q_boundary[0] *= omega1/(-omega+omega1) ;
+                    // q_boundary[1] *= omega1/(-omega+omega1) ;
+                    // q_boundary[2] *= omega1/(-omega+omega1) ;
 
                     double delQdevx, delQdevy, delQdevz;
                     delQdevx = fd_central(mixture[i-1][j][k].rho*mixture[i-1][j][k].u*(1.0-3.0*gas_const*mixture[i-1][j][k].temp)-mixture[i-1][j][k].rho*cb(mixture[i-1][j][k].u), mixture[i][j][k].rho*mixture[i][j][k].u*(1.0-3.0*gas_const*mixture[i][j][k].temp)-mixture[i][j][k].rho*cb(mixture[i][j][k].u), mixture[i+1][j][k].rho*mixture[i+1][j][k].u*(1.0-3.0*gas_const*mixture[i+1][j][k].temp)-mixture[i+1][j][k].rho*cb(mixture[i+1][j][k].u), dx, mixture[i][j][k].u, mixture[i-1][j][k].type, mixture[i+1][j][k].type) ;
                     delQdevy = fd_central(mixture[i][j-1][k].rho*mixture[i][j-1][k].v*(1.0-3.0*gas_const*mixture[i][j-1][k].temp)-mixture[i][j-1][k].rho*cb(mixture[i][j-1][k].v), mixture[i][j][k].rho*mixture[i][j][k].v*(1.0-3.0*gas_const*mixture[i][j][k].temp)-mixture[i][j][k].rho*cb(mixture[i][j][k].v), mixture[i][j+1][k].rho*mixture[i][j+1][k].v*(1.0-3.0*gas_const*mixture[i][j+1][k].temp)-mixture[i][j+1][k].rho*cb(mixture[i][j+1][k].v), dy, mixture[i][j][k].v, mixture[i][j-1][k].type, mixture[i][j+1][k].type) ;
                     delQdevz = fd_central(mixture[i][j][k-1].rho*mixture[i][j][k-1].w*(1.0-3.0*gas_const*mixture[i][j][k-1].temp)-mixture[i][j][k-1].rho*cb(mixture[i][j][k-1].w), mixture[i][j][k].rho*mixture[i][j][k].w*(1.0-3.0*gas_const*mixture[i][j][k].temp)-mixture[i][j][k].rho*cb(mixture[i][j][k].w), mixture[i][j][k+1].rho*mixture[i][j][k+1].w*(1.0-3.0*gas_const*mixture[i][j][k+1].temp)-mixture[i][j][k+1].rho*cb(mixture[i][j][k+1].w), dz, mixture[i][j][k].w, mixture[i][j][k-1].type, mixture[i][j][k+1].type) ;
 
-                    // std::cout << j << " | " << delQdevy << " | " << mixture[i][j][k].dQdevy << std::endl;
-                    // std::cout << mixture[i][j][k].dQdevy << std::endl;
-
-                    double d_str_heat_flux[3] ={  velocity[0]*(mixture[i][j][k].p_tensor[0][0]-eq_p_tensor[0][0]) + velocity[1]*(mixture[i][j][k].p_tensor[1][0]-eq_p_tensor[1][0]) + velocity[2]*(mixture[i][j][k].p_tensor[2][0]-eq_p_tensor[2][0]) + 0.5*dt_sim*velocity[0]*delQdevx,   //+ 0.5*dt_sim*velocity[0]*delQdevx + 0.5*dt_sim*velocity[0]*mixture[i][j][k].dQdevx
-                                                  velocity[0]*(mixture[i][j][k].p_tensor[0][1]-eq_p_tensor[0][1]) + velocity[1]*(mixture[i][j][k].p_tensor[1][1]-eq_p_tensor[1][1]) + velocity[2]*(mixture[i][j][k].p_tensor[2][1]-eq_p_tensor[2][1]) + 0.5*dt_sim*velocity[1]*delQdevy,   //+ 0.5*dt_sim*velocity[1]*delQdevy + 0.5*dt_sim*velocity[1]*mixture[i][j][k].dQdevy
-                                                  velocity[0]*(mixture[i][j][k].p_tensor[0][2]-eq_p_tensor[0][2]) + velocity[1]*(mixture[i][j][k].p_tensor[1][2]-eq_p_tensor[1][2]) + velocity[2]*(mixture[i][j][k].p_tensor[2][2]-eq_p_tensor[2][2]) + 0.5*dt_sim*velocity[2]*delQdevz} ; //+ 0.5*dt_sim*velocity[2]*delQdevz + 0.5*dt_sim*velocity[2]*mixture[i][j][k].dQdevz
+                    double d_str_heat_flux[3] ={  velocity[0]*(mixture[i][j][k].p_tensor[0][0]-eq_p_tensor[0][0]) + velocity[1]*(mixture[i][j][k].p_tensor[1][0]-eq_p_tensor[1][0]) + velocity[2]*(mixture[i][j][k].p_tensor[2][0]-eq_p_tensor[2][0]) + 0.5*dt_sim*velocity[0]*delQdevx + q_boundary[0],   //+ 0.5*dt_sim*velocity[0]*delQdevx + 0.5*dt_sim*velocity[0]*mixture[i][j][k].dQdevx
+                                                  velocity[0]*(mixture[i][j][k].p_tensor[0][1]-eq_p_tensor[0][1]) + velocity[1]*(mixture[i][j][k].p_tensor[1][1]-eq_p_tensor[1][1]) + velocity[2]*(mixture[i][j][k].p_tensor[2][1]-eq_p_tensor[2][1]) + 0.5*dt_sim*velocity[1]*delQdevy + q_boundary[1],   //+ 0.5*dt_sim*velocity[1]*delQdevy + 0.5*dt_sim*velocity[1]*mixture[i][j][k].dQdevy
+                                                  velocity[0]*(mixture[i][j][k].p_tensor[0][2]-eq_p_tensor[0][2]) + velocity[1]*(mixture[i][j][k].p_tensor[1][2]-eq_p_tensor[1][2]) + velocity[2]*(mixture[i][j][k].p_tensor[2][2]-eq_p_tensor[2][2]) + 0.5*dt_sim*velocity[2]*delQdevz + q_boundary[2]} ; //+ 0.5*dt_sim*velocity[2]*delQdevz + 0.5*dt_sim*velocity[2]*mixture[i][j][k].dQdevz
 
                     double corr[3] = {  dt_sim*(2-omega)/(2*mixture[i][j][k].rho*omega)*delQdevx,
                                         dt_sim*(2-omega)/(2*mixture[i][j][k].rho*omega)*delQdevy,

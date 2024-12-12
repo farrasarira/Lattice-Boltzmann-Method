@@ -16,7 +16,7 @@ void LBM::calculate_moment()
     for (int i = 0; i < Nx; ++i){
         for (int j = 0; j < Ny; ++j){
             for (int k = 0; k < Nz; ++k){
-                if (mixture[i][j][k].type==TYPE_F || mixture[i][j][k].type==TYPE_S){
+                if (mixture[i][j][k].type==TYPE_F ){ //
                     // defined variables
                     double rho = 0.0;
                     double rhou = 0.0;
@@ -77,6 +77,41 @@ void LBM::calculate_moment()
                   
                        
                 }
+
+                #ifdef CONJUGATE
+                else if (mixture[i][j][k].type==TYPE_S ){ //
+                    // defined variables
+
+                    double rhoe = 0.0;
+                    double heat_flux_x=0.0;
+                    double heat_flux_y=0.0;
+                    double heat_flux_z=0.0;
+                    
+                    for (int l = 0; l < npop; ++l){
+                        #ifndef ISOTHERM
+                        rhoe += mixture[i][j][k].g[l];
+                        heat_flux_x += mixture[i][j][k].g[l]*cx[l];
+                        heat_flux_y += mixture[i][j][k].g[l]*cy[l];
+                        heat_flux_z += mixture[i][j][k].g[l]*cz[l];
+                        #endif
+                    }
+
+                    #ifndef ISOTHERM
+                    mixture[i][j][k].rhoe = rhoe;
+                    mixture[i][j][k].energy_flux[0]=heat_flux_x;
+                    mixture[i][j][k].energy_flux[1]=heat_flux_y;
+                    mixture[i][j][k].energy_flux[2]=heat_flux_z;
+
+                    double internalEnergy=mixture[i][j][k].rhoe/mixture[i][j][k].rho;
+                    double cv = gas_const / (gamma - 1.0);
+                    mixture[i][j][k].temp = internalEnergy / cv;
+                    #endif
+                    mixture[i][j][k].p = mixture[i][j][k].rho*gas_const*mixture[i][j][k].temp;
+
+                    // const double G_lambda = Ra*(nu*nu/prtl) / (0.1*(Ny-2.0)*(Ny-2.0)*(Ny-2.0));
+                    // mixture[i][j][k].v = mixture[i][j][k].v + 0.5*dt_sim*G_lambda*(mixture[i][j][k].temp-0.15); 
+                }
+                #endif
 
             }
         }

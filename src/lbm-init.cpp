@@ -16,11 +16,11 @@ void LBM::Init()
         {
             for(int k = 0; k < Nz; ++k)
             {    
-                if (mixture[i][j][k].type == TYPE_F || mixture[i][j][k].type == TYPE_S || mixture[i][j][k].type == TYPE_I || mixture[i][j][k].type == TYPE_O)     
+                if (mixture[i][j][k].type == TYPE_F || mixture[i][j][k].type == TYPE_S || mixture[i][j][k].type == TYPE_I || mixture[i][j][k].type == TYPE_O  || mixture[i][j][k].type == TYPE_Q)     
                 {            
-                    double velocity[3] = {  mixture[i][j][k].u,
-                                            mixture[i][j][k].v, 
-                                            mixture[i][j][k].w};
+                    double velocity[3] = {  0.0*mixture[i][j][k].u,
+                                            0.0*mixture[i][j][k].v, 
+                                            0.0*mixture[i][j][k].w};
                     mixture[i][j][k].rho = mixture[i][j][k].p / (gas_const*mixture[i][j][k].temp);
                     double theta = gas_const*mixture[i][j][k].temp;   
                     double eq_p_tensor[3][3] = {{0., 0., 0.},    // pressure tensor
@@ -38,8 +38,27 @@ void LBM::Init()
 
                     #ifndef ISOTHERM
                     double cv = gas_const / (gamma - 1.0);
+                    double cp = cv + gas_const;
                     double internal_energy = cv * mixture[i][j][k].temp;
                     mixture[i][j][k].rhoe = mixture[i][j][k].rho*(internal_energy + 0.5 * v_sqr(velocity[0], velocity[1], velocity[2]));
+
+                    double enthalpy = cp * mixture[i][j][k].temp; // H = Cp * T = (Cv + 1) * T
+                    double total_enthalpy = enthalpy + 0.5 * v_sqr(velocity[0], velocity[1], velocity[2]);
+
+                    double eq_R_tensor[3][3] = {{0., 0., 0.},    // second-order moment of g
+                                                {0., 0., 0.},
+                                                {0., 0., 0.}};
+
+                    for(int p=0; p < 3; ++p)
+                        for(int q=0; q < 3; ++q){
+                            // eq_p_tensor[p][q] = (p==q) ? mixture[i][j][k].p+mixture[i][j][k].rho*velocity[p]*velocity[q] : mixture[i][j][k].rho*velocity[p]*velocity[q]; 
+                            eq_R_tensor[p][q] = total_enthalpy*eq_p_tensor[p][q] + mixture[i][j][k].p*velocity[p]*velocity[q];
+                        }
+
+                    double eq_heat_flux[3] = {  total_enthalpy*mixture[i][j][k].rho*mixture[i][j][k].u,
+                                                total_enthalpy*mixture[i][j][k].rho*mixture[i][j][k].v,
+                                                total_enthalpy*mixture[i][j][k].rho*mixture[i][j][k].w};
+                    
                     #endif
 
 
@@ -49,7 +68,7 @@ void LBM::Init()
                         // ------------- Mass and Momentum Distribution Function Initialization -----------------------------
                         mixture[i][j][k].f[l] = calculate_feq(l, mixture[i][j][k].rho, velocity, theta, corr);        
                         #ifndef ISOTHERM              
-                        mixture[i][j][k].g[l] = calculate_geq(l, mixture[i][j][k].rho, internal_energy, theta, velocity);
+                        mixture[i][j][k].g[l] = calculate_geq(l, mixture[i][j][k].rhoe, eq_heat_flux, eq_R_tensor, theta);
                         #endif
 
                     }     

@@ -45,14 +45,15 @@
     // #define OPPOSED_JET_FLAME
     // #define PREMIXED_JET_FLAME
     // #define MICROCHANNEL_FLAME
-    #define CIRCULAR_FLAME
+    // #define CIRCULAR_FLAME
     // #define HEATED_OBSTACLE
-
+    #define HEAT_LID_DRIVEN
+    
     // ################ ISOTHERMAL ###################
     // #define ISOTHERM
 
     // ################# REACTION ####################
-    #define REACTION
+    // #define REACTION
 
     // ##### CONJUGATE HEAT TRANSFER FLUID-SOLID #####
     // #define CONJUGATE
@@ -99,7 +100,7 @@
     #elif defined AA
         #define D2Q9
         #define NDIM 2
-    #elif defined TAYLOR_GREEN_2D || defined TAYLOR_GREEN_3D || defined CHANNEL_FLOW_3D || defined CYLINDER_3D || defined VISCOSITY_TEST || defined CONDUCTIVITY_TEST || defined SOUNDSPEED_TEST || defined SOD_SHOCK || defined TERNARY_DIFFUSION || defined SOD_SHOCK_SIUNIT || defined SHEAR_LAYER_MULTICOMP || defined PERFECTLY_STIRRED_REACTOR_3D || defined CYLINDER_2D || defined CONDUCTION_1D || defined BPVT_1 || defined COUETTE_FLOW || defined COUETTE_FLOW_MULTICOMP || defined TAYLOR_GREEN_3D_MULTICOMP || defined SHEAR_LAYER || defined SHOCK_VORTEX_INTERAC || defined RB_INSTABILITY || defined CONDUCTION_BLACK || defined RB_INSTABILITY_MULTICOMP || defined VISCOSITY_TEST_MULTICOMP || defined VISCOSITY_TEST_ROTATED || defined OPPOSED_JET || defined POINT_COMBUSTION_2D || defined FLAME_SPEED || defined PREMIXED_LAMINAR_FLAME_2D || defined OPPOSED_JET_MULTICOMP || defined CONVECTED_VORTEX || defined COFLOW_FLAME || defined OPPOSED_JET_FLAME || defined PREMIXED_JET_FLAME || defined MICROCHANNEL_FLAME || defined CIRCULAR_FLAME || defined HEATED_OBSTACLE
+    #elif defined TAYLOR_GREEN_2D || defined TAYLOR_GREEN_3D || defined CHANNEL_FLOW_3D || defined CYLINDER_3D || defined VISCOSITY_TEST || defined CONDUCTIVITY_TEST || defined SOUNDSPEED_TEST || defined SOD_SHOCK || defined TERNARY_DIFFUSION || defined SOD_SHOCK_SIUNIT || defined SHEAR_LAYER_MULTICOMP || defined PERFECTLY_STIRRED_REACTOR_3D || defined CYLINDER_2D || defined CONDUCTION_1D || defined BPVT_1 || defined COUETTE_FLOW || defined COUETTE_FLOW_MULTICOMP || defined TAYLOR_GREEN_3D_MULTICOMP || defined SHEAR_LAYER || defined SHOCK_VORTEX_INTERAC || defined RB_INSTABILITY || defined CONDUCTION_BLACK || defined RB_INSTABILITY_MULTICOMP || defined VISCOSITY_TEST_MULTICOMP || defined VISCOSITY_TEST_ROTATED || defined OPPOSED_JET || defined POINT_COMBUSTION_2D || defined FLAME_SPEED || defined PREMIXED_LAMINAR_FLAME_2D || defined OPPOSED_JET_MULTICOMP || defined CONVECTED_VORTEX || defined COFLOW_FLAME || defined OPPOSED_JET_FLAME || defined PREMIXED_JET_FLAME || defined MICROCHANNEL_FLAME || defined CIRCULAR_FLAME || defined HEATED_OBSTACLE || defined HEAT_LID_DRIVEN
         #define D3Q27
         #define NDIM 3
     #endif

@@ -126,7 +126,7 @@ void LBM::Streaming()
                         k_nb = k - cz[l];
 
                         //---- Adiabatic Wall --------------------------
-                        if (mixture[i_nb][j_nb][k_nb].type==TYPE_F ){
+                        if (mixture[i_nb][j_nb][k_nb].type==TYPE_F || mixture[i_nb][j_nb][k_nb].type==TYPE_Q ){
                             
                         }  
                         else if (mixture[i_nb][j_nb][k_nb].type==TYPE_A ){
@@ -134,7 +134,7 @@ void LBM::Streaming()
                             mixture[i][j][k].g[l] = mixture[i][j][k].gpc[opposite[l]];
                             #endif
                         }                                 
-                        else //---- Periodic Boundary Condition --------------------
+                        else if (mixture[i_nb][j_nb][k_nb].type==TYPE_S || mixture[i_nb][j_nb][k_nb].type==TYPE_P)//---- Periodic Boundary Condition --------------------
                         {
                             // if (i_nb < 1) i_nb = Nx-2;
                             // else if(i_nb > Nx-2) i_nb = 1;

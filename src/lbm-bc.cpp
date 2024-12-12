@@ -1402,7 +1402,7 @@ void LBM::TMS_BC()
                             j_nb = j - cy[l];
                             k_nb = k - cz[l];
 
-                            if(mixture[i_nb][j_nb][k_nb].type==TYPE_F && mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].type==TYPE_S){    
+                            if((mixture[i_nb][j_nb][k_nb].type==TYPE_F || mixture[i_nb][j_nb][k_nb].type==TYPE_Q ) && mixture[(int)(i+cx[l])][(int)(j+cy[l])][(int)(k+cz[l])].type==TYPE_S){    //|| mixture[i_nb][j_nb][k_nb].type==TYPE_Q
                                 interface_nodes[l] = true;
                                 n_d = n_d + 1;
                             }                            
@@ -1451,7 +1451,7 @@ void LBM::TMS_BC()
                             j_nb = j - cy[l];
                             k_nb = k - cz[l];
 
-                            if (mixture[i_nb][j_nb][k_nb].type==TYPE_F){
+                            if (mixture[i_nb][j_nb][k_nb].type==TYPE_F || mixture[i_nb][j_nb][k_nb].type==TYPE_Q){ //|| mixture[i_nb][j_nb][k_nb].type==TYPE_Q
                                 rho_loc += f_tgt[l];
                                 rhou_loc += f_tgt[l]*cx[l];
                                 rhov_loc += f_tgt[l]*cy[l];
@@ -1484,7 +1484,7 @@ void LBM::TMS_BC()
                             j_nb = j - cy[l];
                             k_nb = k - cz[l];
 
-                            if (mixture[i_nb][j_nb][k_nb].type==TYPE_F){
+                            if (mixture[i_nb][j_nb][k_nb].type==TYPE_F || mixture[i_nb][j_nb][k_nb].type==TYPE_Q){ //|| mixture[i_nb][j_nb][k_nb].type==TYPE_Q
                                 // mixture[i][j][k].f[l] = 2*f_tgt[l] - f_loc[l];
                                 mixture[i][j][k].g[l] = 2*g_tgt[l] - g_loc[l];
                             }

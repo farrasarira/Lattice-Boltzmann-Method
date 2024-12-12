@@ -2950,80 +2950,167 @@ void main_setup() // Perfectly stirred reactor ---------------------------------
         {
             for(int k = 0; k < Nz; ++k)
             {
-                // if ( k==0 || k==Nz-1) // set periodic boundary condition
-                // {
-                //     lb.mixture[i][j][k].type = TYPE_P;
-                // }
 
-                // if ( i==0 )
-                // {
-                //     lb.mixture[i][j][k].type = TYPE_I;
-                //     lb.mixture[i][j][k].u = units.u(3.136);
-                //     lb.mixture[i][j][k].v = 0.0;
-                //     lb.mixture[i][j][k].w = 0.0; 
+                if ( k==0 || k==Nz-1) // set periodic boundary condition
+                {
+                    lb.mixture[i][j][k].type = TYPE_P;
+                }
 
-                //     lb.mixture[i][j][k].p = 1.0*units.p(Cantera::OneAtm);  
-                //     lb.mixture[i][j][k].temp = units.temp(300.0);                 
-                // }
-                // if ( i==Nx-1 )
-                // {
-                //     lb.mixture[i][j][k].type = TYPE_O;
-                //     lb.mixture[i][j][k].p = 1.0*units.p(Cantera::OneAtm);                 
-                // }
+                if ( i==0 )
+                {
+                    lb.mixture[i][j][k].type = TYPE_I;
+                    lb.mixture[i][j][k].u = units.u(3.136);
+                    lb.mixture[i][j][k].v = 0.0;
+                    lb.mixture[i][j][k].w = 0.0; 
 
-                // if ( j==0 || j==Ny-1)
-                // {
-                //     lb.mixture[i][j][k].type = TYPE_A;
-                // }
-                // if ( i > 5*Ny && i < 5*Ny+h && j > 0 && j < h )
-                // {
-                //     lb.mixture[i][j][k].type = TYPE_S;
-                //     lb.mixture[i][j][k].temp = units.temp(300.0);
-                //     lb.mixture[i][j][k].p = 1.0*units.p(Cantera::OneAtm);  
-                // }                
-                // if ( i > 5.5*Ny && i < 5.5*Ny+h && j < Ny-1 && j > Ny-1-h )
-                // {
-                //     lb.mixture[i][j][k].type = TYPE_S;
-                //     lb.mixture[i][j][k].temp = units.temp(300.0);
-                //     lb.mixture[i][j][k].p = 1.0*units.p(Cantera::OneAtm);  
-                // }
-                // if ( i > 6*Ny && i < 6*Ny+h && j > 0 && j < h )
-                // {
-                //     lb.mixture[i][j][k].type = TYPE_S;
-                //     lb.mixture[i][j][k].temp = units.temp(300.0);
-                //     lb.mixture[i][j][k].p = 1.0*units.p(Cantera::OneAtm);  
-                // }
+                    lb.mixture[i][j][k].p = 1.0*units.p(Cantera::OneAtm);  
+                    lb.mixture[i][j][k].temp = units.temp(300.0);                 
+                }
+                if ( i==Nx-1 )
+                {
+                    lb.mixture[i][j][k].type = TYPE_O;
+                    lb.mixture[i][j][k].p = 1.0*units.p(Cantera::OneAtm);                 
+                }
 
-
-                // if (lb.mixture[i][j][k].type == TYPE_F || lb.mixture[i][j][k].type == TYPE_O )
-                // {
-                //     lb.mixture[i][j][k].u = units.u(3.136);
-                //     lb.mixture[i][j][k].v = 0.0;
-                //     lb.mixture[i][j][k].w = 0.0; 
-
-                //     lb.mixture[i][j][k].p = 1.0*units.p(Cantera::OneAtm);  
-                //     lb.mixture[i][j][k].temp = units.temp(300.0);
-                // }
-
-                if ( i==0 || i==Nx-1 || j==0 || j==Ny-1 || k==0 || k==Nz-1) // set periodic boundary condition
+                if ( j==0 || j==Ny-1)
                 {
                     lb.mixture[i][j][k].type = TYPE_A;
                 }
-                else{
-                    lb.mixture[i][j][k].type = TYPE_S;
-                    lb.mixture[i][j][k].p = 1.0*units.p(Cantera::OneAtm);  
-                    if (i < 0.5*Nx)
-                        lb.mixture[i][j][k].temp = units.temp(300.0);
-                    else
-                        lb.mixture[i][j][k].temp = units.temp(400.0);
 
+                if ( i > 5*Ny && i < 5*Ny+h && j == 0){
+                    lb.mixture[i][j][k].type = TYPE_Q;
+                    lb.mixture[i][j][k].temp = units.temp(500.0);
+                    lb.mixture[i][j][k].p = 1.0*units.p(Cantera::OneAtm); 
+                    lb.mixture[i][j][k].energy_flux[1] = units.energy_flux(436.7); 
+                }
+                if ( i > 5*Ny && i < 5*Ny+h && j > 0 && j < h && lb.mixture[i][j][k].type != TYPE_P)
+                {
+                    lb.mixture[i][j][k].type = TYPE_S;
+                    lb.mixture[i][j][k].temp = units.temp(300.0);
+                    lb.mixture[i][j][k].p = 1.0*units.p(Cantera::OneAtm);  
+                }   
+                if ( i > 5.5*Ny && i < 5.5*Ny+h && j == Ny-1){
+                    lb.mixture[i][j][k].type = TYPE_Q;
+                    lb.mixture[i][j][k].temp = units.temp(500.0);
+                    lb.mixture[i][j][k].p = 1.0*units.p(Cantera::OneAtm); 
+                    lb.mixture[i][j][k].energy_flux[1] = units.energy_flux(436.7); 
+                }             
+                if ( i > 5.5*Ny && i < 5.5*Ny+h && j < Ny-1 && j > Ny-1-h && lb.mixture[i][j][k].type != TYPE_P)
+                {
+                    lb.mixture[i][j][k].type = TYPE_S;
+                    lb.mixture[i][j][k].temp = units.temp(300.0);
+                    lb.mixture[i][j][k].p = 1.0*units.p(Cantera::OneAtm);  
+                }
+                if ( i > 6*Ny && i < 6*Ny+h && j == 0){
+                    lb.mixture[i][j][k].type = TYPE_Q;
+                    lb.mixture[i][j][k].temp = units.temp(500.0);
+                    lb.mixture[i][j][k].p = 1.0*units.p(Cantera::OneAtm); 
+                    lb.mixture[i][j][k].energy_flux[1] = units.energy_flux(436.7); 
+                }  
+                if ( i > 6*Ny && i < 6*Ny+h && j > 0 && j < h && lb.mixture[i][j][k].type != TYPE_P)
+                {
+                    lb.mixture[i][j][k].type = TYPE_S;
+                    lb.mixture[i][j][k].temp = units.temp(300.0);
+                    lb.mixture[i][j][k].p = 1.0*units.p(Cantera::OneAtm);  
                 }
 
+
+                if (lb.mixture[i][j][k].type == TYPE_F || lb.mixture[i][j][k].type == TYPE_O )
+                {
+                    lb.mixture[i][j][k].u = units.u(3.136);
+                    lb.mixture[i][j][k].v = 0.0;
+                    lb.mixture[i][j][k].w = 0.0; 
+
+                    lb.mixture[i][j][k].p = 1.0*units.p(Cantera::OneAtm);  
+                    lb.mixture[i][j][k].temp = units.temp(300.0);
+                }
+               
             }
         }
     }
 
-    lb.run(1000000000,100);
+    lb.run(1000000000,1000);
+
+    // LBM lb = read_restart("restart000001.dat");
+    // lb.loop(840001, 1);
+}
+
+#elif defined HEAT_LID_DRIVEN
+void main_setup() // Perfectly stirred reactor ------------------------------------------------------------------------------------------
+{
+    units.set_m_kg_s(1.0e-5, 0.5e-8 );
+
+    int NX = 200; 
+    int NY = 200; 
+    int NZ = 1;
+
+    double nu = units.nu(1.0e-4) ;
+    
+    LBM lb(NX, NY, NZ, nu);
+    int Nx = lb.get_Nx(); int Ny = lb.get_Ny(); int Nz = lb.get_Nz();
+
+    lb.set_prtl(0.71);
+    lb.set_gamma(1.4);
+    lb.set_gasconst(units.cp(287));
+
+    double Re = 400;
+    double u_wall = Re*nu/NX;
+
+    std::cout << "u_ave (lu)    : " << u_wall << std::endl;
+    std::cout << "nu (lu)       : " << nu << std::endl;
+    std::cout << "gas const (lu): " << lb.get_gasconst() << std::endl;
+    std::cout << "RT (lu)       : " << lb.get_gasconst()*units.temp(300.0) << std::endl;
+
+    #pragma omp parallel for schedule(dynamic)
+    for(int i = 0; i < Nx ; ++i)
+    {
+        for(int j = 0; j < Ny; ++j)
+        {
+            for(int k = 0; k < Nz; ++k)
+            {
+
+                if ( k==0 || k==Nz-1) // set periodic boundary condition
+                {
+                    lb.mixture[i][j][k].type = TYPE_P;
+                }
+
+                if ( i==0 || i==Nx-1 || j==0 )
+                {
+                    lb.mixture[i][j][k].type = TYPE_S;
+                    lb.mixture[i][j][k].u = 0.0;
+                    lb.mixture[i][j][k].v = 0.0;
+                    lb.mixture[i][j][k].w = 0.0; 
+
+                    lb.mixture[i][j][k].p = 1.0*units.p(86100);  
+                    lb.mixture[i][j][k].temp = units.temp(300.0);                 
+                }
+                if ( j==Ny-1 )
+                {
+                    lb.mixture[i][j][k].type = TYPE_S;
+                    lb.mixture[i][j][k].u = u_wall;
+                    lb.mixture[i][j][k].v = 0.0;
+                    lb.mixture[i][j][k].w = 0.0; 
+
+                    lb.mixture[i][j][k].p = 1.0*units.p(86100);  
+                    lb.mixture[i][j][k].temp = units.temp(1500.0);                 
+                }
+                
+
+                if (lb.mixture[i][j][k].type == TYPE_F || lb.mixture[i][j][k].type == TYPE_O )
+                {
+                    lb.mixture[i][j][k].u = 0.0;
+                    lb.mixture[i][j][k].v = 0.0;
+                    lb.mixture[i][j][k].w = 0.0; 
+
+                    lb.mixture[i][j][k].p = 1.0*units.p(86100);  
+                    lb.mixture[i][j][k].temp = units.temp(300.0);
+                }
+               
+            }
+        }
+    }
+
+    lb.run(1000000000,1000);
 
     // LBM lb = read_restart("restart000001.dat");
     // lb.loop(840001, 1);
