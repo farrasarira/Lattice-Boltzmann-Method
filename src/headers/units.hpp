@@ -113,7 +113,7 @@
         inline float si_temp(const float temp) const {return temp*K;} // temperature
         inline float si_energy_mass(const float energy_mass) const {return energy_mass * (m*m)/(s*s);}
         inline float si_energy(const float energy_mass) const {return energy_mass * kg *(m*m)/(s*s);}
-        // float si_mu(const float mu) const {return mu * kg / (m * s) ;} // dynamic viscosity
+        float si_mu(const float mu) const {return mu * kg / (m * s) ;} // dynamic viscosity
         // float si_frequency(const float frequency) const { return frequency/s; } // frequency si_frequency = frequency*[1/s]
         // float si_V(const float V) const { return V*cb(m); } // volume si_V = V*[m^3]
         inline float si_u(const float u) const { return u*m/s; } // velocity si_u = u*[m/s]
@@ -127,6 +127,9 @@
         // float si_T(const float T) const { return T*kg*sq(m)/sq(s); } // torque si_T = T*[kg*m^2/s^2]
         // float si_sigma(const float sigma) const { return sigma*kg/sq(s); } // surface tension si_sigma = sigma*[kg/s^2]
         inline float si_HRR(const float HRR) const { return HRR * (kg*sq(m)/cb(s)); } // Heat Relese Rate  
+        inline float si_thermalConductivity(const float lamda) const { return lamda / (s*s*s*K / (kg*m)) ; } // thermal conductivity
+        inline float si_cp(const float cp) const { return cp / (s*s*K / (m*m)); }
+
 
 
         // // other conversions in simulation units (can be called before set_m_kg_s(...);)
