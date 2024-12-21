@@ -22,7 +22,7 @@ $(OBJDIR)/%.o: $(SRCDIR)/%.cpp
 
 .PHONY: clean
 clean: 
-	rm -rf $(TARGET) $(OBJECT) $(OUTPUT) $(OBJDIR) $(RESTART)
+	rm -rf $(TARGET) $(OBJECT) $(OBJDIR) $(RESTART)
 output_clean:
 	rm -rf $(OUTPUT)
 restart_clean:

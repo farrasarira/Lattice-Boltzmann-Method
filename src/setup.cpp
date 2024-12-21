@@ -3373,6 +3373,130 @@ void main_setup() // Perfectly stirred reactor ---------------------------------
     // lb.loop(10000000000, 100000);
 }
 
+    
+#elif defined FLAME_VORTEX
+void main_setup() // Perfectly stirred reactor ------------------------------------------------------------------------------------------
+{
+    units.set_m_kg_s(0.5e-5, 1.0e-9); //6.4e-6, 6.4e-10 (0.75-1.0)
+    
+    int NX = 800; 
+    int NY = 200; 
+    int NZ = 1;
+    
+    // auto sol = Cantera::newSolution("h2o2.yaml", "ohmech");
+    auto sol = Cantera::newSolution("./src/reaction-mech/propane_mech.yaml");
+    auto gas = sol->thermo();
+
+    std::vector<std::string> species = gas->speciesNames();
+
+    LBM lb(NX, NY, NZ, species);
+    int Nx = lb.get_Nx(); int Ny = lb.get_Ny(); int Nz = lb.get_Nz();
+
+    LBM lb_1 = read_restart("restart3400000.dat");
+
+    double midpoint = 0.5*Nx;
+    double midpoint_1 = 401;
+
+    double gamma = units.nu(1e-3);
+    double radius_c = units.x(1e-4);
+    double delta_f = 91;
+    double xc = midpoint - 2*delta_f;
+    double yc_1 = units.x(0.4e-3);
+    // double yc_2 = -yc_1;
+
+    double u0 = units.u(0.0);
+    
+    auto trans = sol->transport();
+    std::vector <double> X (gas->nSpecies());
+    X[gas->speciesIndex("C3H8")] = 0.070312;
+    // X[gas->speciesIndex("O2")] = 0.19531;
+    // X[gas->speciesIndex("H2O")] = 0.061;
+    // X[gas->speciesIndex("CO2")] = 0.111;
+    X[gas->speciesIndex("N2")] = 0.73438;
+    gas->setMoleFractions(&X[0]);
+    gas->setState_TP(300, Cantera::OneAtm);
+    gas->getMoleFractions(&X[0]);
+    
+    std::cout << "nu (lu) : " << units.nu(trans->viscosity() / gas->density()) << std::endl;
+    std::cout << "gas const : " << units.cp(Cantera::GasConstant/gas->meanMolecularWeight()) << std::endl;
+    std::cout << "temperature : " << units.temp(gas->temperature()) << std::endl;
+    std::cout << "gamma : " << gas->cp_mass()/gas->cv_mass() << std::endl;
+    std::cout << "sound speed : " << units.u(gas->soundSpeed()) << " " << gas->soundSpeed() <<  std::endl;
+    std::cout << "RT : " << units.cp(Cantera::GasConstant/gas->meanMolecularWeight())*units.temp(gas->temperature()) << " " << Cantera::GasConstant/gas->meanMolecularWeight()*gas->temperature() << std::endl;
+
+    #pragma omp parallel for schedule(dynamic)
+    for(int i = 0; i < Nx ; ++i)
+    {
+        for(int j = 0; j < Ny; ++j)
+        {
+            for(int k = 0; k < Nz; ++k)
+            {
+                if ( k==0 || k==Nz-1) // set periodic boundary condition
+                {
+                    lb.mixture[i][j][k].type = TYPE_P;
+                }
+                if ( j==0 || j==Ny-1 ) // set periodic boundary condition
+                {
+                    lb.mixture[i][j][k].type = TYPE_FS;
+                }
+                if (i==0)
+                {
+                    lb.mixture[i][j][k].type = TYPE_I;
+                }
+                if (i==Nx-1)
+                {
+                    lb.mixture[i][j][k].type = TYPE_O;
+                    lb.mixture[i][j][k].p = 1.0*units.p(Cantera::OneAtm);                 
+                }
+
+                if (lb.mixture[i][j][k].type == TYPE_F || lb.mixture[i][j][k].type == TYPE_I || lb.mixture[i][j][k].type == TYPE_O)
+                {
+                    double d_mid = midpoint - midpoint_1;
+                    double mid = d_mid;// + A0*sin(2.0*M_PI/(Ny/2.0)*j);
+
+                    // std::cout << i << std::endl;
+                    
+                    if (i - mid < 1){
+                        for (size_t a = 0; a < gas->nSpecies(); ++ a)
+                            lb.species[a][i][j][k].X    = lb_1.species[a][1][1][1].X;
+
+                        lb.mixture[i][j][k].p   = lb_1.mixture[1][1][1].p;                 
+                        lb.mixture[i][j][k].temp= lb_1.mixture[1][1][1].temp;
+                    }
+                    else if (i - mid > Nx-2){
+                        for (size_t a = 0; a < gas->nSpecies(); ++ a)
+                            lb.species[a][i][j][k].X    = lb_1.species[a][Nx-2][1][1].X;
+
+                        lb.mixture[i][j][k].p   = lb_1.mixture[Nx-2][1][1].p;                 
+                        lb.mixture[i][j][k].temp= lb_1.mixture[Nx-2][1][1].temp;
+                    }
+                    else{
+                        for (size_t a = 0; a < gas->nSpecies(); ++ a)
+                            lb.species[a][i][j][k].X    = lb_1.species[a][(int)(i-mid)][1][1].X;
+
+                        lb.mixture[i][j][k].p   = lb_1.mixture[(int)(i-mid)][1][1].p;                 
+                        lb.mixture[i][j][k].temp= lb_1.mixture[(int)(i-mid)][1][1].temp; 
+                    }
+
+                    double rad_1 =  sqrt( sq(i-xc) + sq(j-yc_1) );
+                    lb.mixture[i][j][k].u = u0 - gamma*(j-yc_1)/radius_c * exp(-1 * sq(rad_1)/(2.0*sq(radius_c)) );
+                    lb.mixture[i][j][k].v = gamma*(i-xc)/radius_c * exp(-1 * sq(rad_1)/(2.0*sq(radius_c)) );
+
+                    // double rad_2 =  sqrt( sq(i-xc) + sq(j-yc_2) );
+                    // lb.mixture[i][j][k].u += - gamma*(j-yc_2)/radius_c * exp(-1 * sq(rad_2)/(2.0*sq(radius_c)) );
+                    // lb.mixture[i][j][k].v += gamma*(i-xc)/radius_c * exp(-1 * sq(rad_2)/(2.0*sq(radius_c)) );
+
+                }
+            }
+        }
+    }
+
+    lb_1.~LBM();
+    lb.run(10000000000,10000);
+
+    // LBM lb = read_restart("restart1000000.dat");
+    // lb.loop(10000000000, 100000);
+}
 
 #endif
 
