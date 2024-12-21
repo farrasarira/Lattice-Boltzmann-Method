@@ -531,10 +531,10 @@ void LBM::Collide_Species()
                             freact_a = calculate_feq(l, rho_a[a], velocity_mix, theta, corr_zero);
                             #endif
 
-                            if (species[a][i][j][k].X == 0.0 && freact_a == 0.0) 
+                            if (species[a][i][j][k].rho <= SPECIES_MIN && freact_a <= 0.0) 
                                 continue;
-                            else if (species[a][i][j][k].X == 0.0)
-                                species[a][i][j][k].fpc[l] = freact_a;
+                            // else if (species[a][i][j][k].rho == SPECIES_MIN)
+                            //     species[a][i][j][k].fpc[l] = freact_a;
                             else
                                 species[a][i][j][k].fpc[l] = species[a][i][j][k].f[l] + omega_a[a]*(feq_a-species[a][i][j][k].f[l]) + (feq_du_a - feq_a) + freact_a;
                         }

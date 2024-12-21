@@ -254,16 +254,16 @@ void LBM::calculate_moment()
                                     mixture[i][j][k].p_tensor[p][q] += species[a][i][j][k].f[l]*velocity_set[p]*velocity_set[q];
                                 }
                         }
-                        if (rho_a[a] != 0)
+                        if (rho_a[a] > SPECIES_MIN)
                         {
-                            species[a][i][j][k].rho = rho_a[a];
+                            species[a][i][j][k].rho = std::max(rho_a[a], SPECIES_MIN);
                             species[a][i][j][k].u = rhou_a[a] / rho_a[a];
                             species[a][i][j][k].v = rhov_a[a] / rho_a[a];
                             species[a][i][j][k].w = rhow_a[a] / rho_a[a];
                         }
                         else 
                         {
-                            species[a][i][j][k].rho = 0.0;
+                            species[a][i][j][k].rho = SPECIES_MIN;
                             species[a][i][j][k].u = 0.0;
                             species[a][i][j][k].v = 0.0;
                             species[a][i][j][k].w = 0.0;

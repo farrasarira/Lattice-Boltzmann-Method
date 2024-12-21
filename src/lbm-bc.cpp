@@ -467,22 +467,22 @@ void LBM::TMS_BC()
 
                         if (mixture[i_nb][j_nb][k_nb].type==TYPE_O || mixture[i_nb][j_nb][k_nb].type==TYPE_O_C){
                             for(size_t a = 0; a < nSpecies; ++a)
-                                // species[a][i][j][k].f[l] = 2*fa_out[a][l] - fa_loc[a][l];
-                                species[a][i][j][k].f[l] = fa_out[a][l];
+                                species[a][i][j][k].f[l] = 2*fa_out[a][l] - fa_loc[a][l];
+                                // species[a][i][j][k].f[l] = fa_out[a][l];
 
                             #ifndef ISOTHERM
-                            // mixture[i][j][k].g[l] = 2*g_out[l] - g_loc[l];
-                            mixture[i][j][k].g[l] = g_out[l];
+                            mixture[i][j][k].g[l] = 2*g_out[l] - g_loc[l];
+                            // mixture[i][j][k].g[l] = g_out[l];
                             #endif
                         }
                         else{
                             for(size_t a = 0; a < nSpecies; ++a)
-                                // species[a][i][j][k].f[l] = fa_out[a][l] + species[a][i][j][k].f[l] - fa_loc[a][l];
-                                species[a][i][j][k].f[l] = fa_out[a][l];
+                                species[a][i][j][k].f[l] = fa_out[a][l] + species[a][i][j][k].f[l] - fa_loc[a][l];
+                                // species[a][i][j][k].f[l] = fa_out[a][l];
 
                             #ifndef ISOTHERM
-                            // mixture[i][j][k].g[l] = g_out[l] + mixture[i][j][k].g[l] - g_loc[l];
-                            mixture[i][j][k].g[l] = g_out[l];
+                            mixture[i][j][k].g[l] = g_out[l] + mixture[i][j][k].g[l] - g_loc[l];
+                            // mixture[i][j][k].g[l] = g_out[l];
                             #endif
                         }
                     }     

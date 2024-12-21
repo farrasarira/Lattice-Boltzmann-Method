@@ -136,6 +136,7 @@
             // constructor
             LBM(int Nx, int Ny, int Nz, double nu);
             LBM(int Nx, int Ny, int Nz, std::vector<std::string> species);
+            ~LBM();
 
             // calculate moment
             void calculate_moment();
