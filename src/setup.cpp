@@ -3417,6 +3417,10 @@ void main_setup() // Perfectly stirred reactor ---------------------------------
     gas->setState_TP(300, Cantera::OneAtm);
     gas->getMoleFractions(&X[0]);
     
+    std::cout << "gamma (lu): " << gamma << std::endl;
+    std::cout << "radius_c (lu): " << radius_c << std::endl;
+    std::cout << "flame thickness (lu): " << delta_f << std::endl;
+
     std::cout << "nu (lu) : " << units.nu(trans->viscosity() / gas->density()) << std::endl;
     std::cout << "gas const : " << units.cp(Cantera::GasConstant/gas->meanMolecularWeight()) << std::endl;
     std::cout << "temperature : " << units.temp(gas->temperature()) << std::endl;
