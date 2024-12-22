@@ -131,7 +131,7 @@ void LBM::Init()
                     // Species distribution function Initialization
                     for(size_t a = 0; a < nSpecies; ++a)
                     {
-                        species[a][i][j][k].rho = gas->massFraction(gas->speciesIndex(speciesName[a])) * mixture[i][j][k].rho;
+                        species[a][i][j][k].rho = std::max( gas->massFraction(gas->speciesIndex(speciesName[a])) * mixture[i][j][k].rho, SPECIES_MIN);
                         species[a][i][j][k].u = mixture[i][j][k].u;
                         species[a][i][j][k].v = mixture[i][j][k].v;
                         species[a][i][j][k].w = mixture[i][j][k].w;

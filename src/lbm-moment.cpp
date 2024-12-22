@@ -372,8 +372,7 @@ void LBM::calculate_moment()
 }
 
 void LBM::calculate_moment_point(int i, int j, int k)
-{
-                   
+{                   
     // defined variables
     double rho = 0.0;
     double rhou = 0.0;

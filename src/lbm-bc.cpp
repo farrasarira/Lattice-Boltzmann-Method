@@ -182,7 +182,6 @@ void LBM::TMS_BC()
                         p_out = mixture[(int)(i-cx[l_interface])][(int)(j-cy[l_interface])][(int)(k-cz[l_interface])].p;
                         // p_out = mixture[(int)(i+cx[l_interface])][(int)(j+cy[l_interface])][(int)(k+cz[l_interface])].p;
 
-
                         int rank = omp_get_thread_num();
                         auto gas = sols[rank]->thermo();   
                         std::vector <double> Y (gas->nSpecies());

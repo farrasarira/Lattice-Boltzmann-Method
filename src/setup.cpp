@@ -2413,7 +2413,7 @@ void main_setup()
 {
     // units.set_m_kg_s(3e-5, 2e-8);
     // units.set_m_kg_s(3e-5, 2e-8); //3e-5, 2e-8
-    units.set_m_kg_s(3e-5, 8e-9);
+    units.set_m_kg_s(3e-5, 3e-9);
 
     double NX = 187;
     double NY = 334;
@@ -2475,7 +2475,7 @@ void main_setup()
 
                     if(i > 0.366*Nx && i < 0.634*Nx){ // fuel in central inlet
                         lb.mixture[i][j][k].v       = units.u(0.8);
-                        lb.species[gas->speciesIndex("CH4")][i][j][k].X = 0.1624900877705;
+                        // lb.species[gas->speciesIndex("CH4")][i][j][k].X = 0.1624900877705;
                         lb.species[gas->speciesIndex("N2")][i][j][k].X = 1.0 - 0.1624900877705;
 
                         // lb.species[0][i][j][k].X = 0.0598242;
@@ -2517,7 +2517,7 @@ void main_setup()
 
                     // lb.species[gas->speciesIndex("O2")][i][j][k].X = 0.2017291647356 - eta/2.0;
                     lb.species[gas->speciesIndex("N2")][i][j][k].X = 1.0 - 0.2017291647356 - eta/2.0;
-                    lb.species[gas->speciesIndex("CH4")][i][j][k].X = eta;
+                    // lb.species[gas->speciesIndex("CH4")][i][j][k].X = eta;
 
                     // lb.species[0][i][j][k].X = 0.0598242;
 
@@ -2664,9 +2664,9 @@ void main_setup()
     auto trans = sol->transport();
     std::vector <double> Y (gas->nSpecies());
     Y[gas->speciesIndex("CH4")] = 0.037;
-    // Y[gas->speciesIndex("O2")] = 0.089;
-    // Y[gas->speciesIndex("H2O")] = 0.061;
-    // Y[gas->speciesIndex("CO2")] = 0.111;
+    Y[gas->speciesIndex("O2")] = 0.089;
+    Y[gas->speciesIndex("H2O")] = 0.061;
+    Y[gas->speciesIndex("CO2")] = 0.111;
     Y[gas->speciesIndex("N2")] = 0.739;
     gas->setMoleFractions(&Y[0]);
     gas->setState_TP(300, Cantera::OneAtm);
@@ -2730,11 +2730,11 @@ void main_setup()
 
                     lb.mixture[i][j][k].temp = units.temp(smooth(300.0, 300.0, j, 0.4*Ny, smoothn)); // 1970
                     
-                    lb.species[gas->speciesIndex("C3H8")][i][j][k].X    = smooth(1e-5      , 0.0553053  , j, 0.25*Ny, smoothn);       
-                    lb.species[gas->speciesIndex("O2")][i][j][k].X      = smooth(0.0964249 , 0.242956   , j, 0.25*Ny, smoothn);
-                    lb.species[gas->speciesIndex("H2O")][i][j][k].X     = smooth(0.0372084 , 1E-5       , j, 0.25*Ny, smoothn);
-                    lb.species[gas->speciesIndex("CO2")][i][j][k].X     = smooth(0.165402  , 1E-5       , j, 0.25*Ny, smoothn);
-                    lb.species[gas->speciesIndex("N2")][i][j][k].X      = smooth(0.700965  ,  0.701739  , j, 0.25*Ny, smoothn);
+                    lb.species[gas->speciesIndex("C3H8")][i][j][k].X    = smooth(SPECIES_MIN, 0.0553053  , j, 0.25*Ny, smoothn);       
+                    lb.species[gas->speciesIndex("O2")][i][j][k].X      = smooth(0.0964249  , 0.242956   , j, 0.25*Ny, smoothn);
+                    lb.species[gas->speciesIndex("H2O")][i][j][k].X     = smooth(0.0372084  , SPECIES_MIN, j, 0.25*Ny, smoothn);
+                    lb.species[gas->speciesIndex("CO2")][i][j][k].X     = smooth(0.165402   , SPECIES_MIN, j, 0.25*Ny, smoothn);
+                    lb.species[gas->speciesIndex("N2")][i][j][k].X      = smooth(0.700965   ,  0.701739  , j, 0.25*Ny, smoothn);
 
                                        
                 }
@@ -2769,7 +2769,7 @@ void main_setup() // Perfectly stirred reactor ---------------------------------
     double temp_u = units.temp(300.0); // [K]
     double temp_b = units.temp(960.0); // [K]960
     double smoothn = 0.4;
-    double minim = 1E-13;
+    double minim = SPECIES_MIN;
     double midpoint = 0.55*Nx/20;
 
     auto trans = sol->transport();
@@ -3398,7 +3398,7 @@ void main_setup() // Perfectly stirred reactor ---------------------------------
     double midpoint_1 = 401;
 
     double gamma = units.nu(1e-3);
-    double radius_c = units.x(1e-4);
+    double radius_c = units.x(2e-4);
     double delta_f = 91;
     double xc = midpoint - 2*delta_f;
     double yc_1 = units.x(0.4e-3);
@@ -3496,7 +3496,7 @@ void main_setup() // Perfectly stirred reactor ---------------------------------
     }
 
     lb_1.~LBM();
-    lb.run(10000000000,10000);
+    lb.run(10000000000,1000);
 
     // LBM lb = read_restart("restart1000000.dat");
     // lb.loop(10000000000, 100000);
