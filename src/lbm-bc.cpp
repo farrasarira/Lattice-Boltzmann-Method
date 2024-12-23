@@ -187,10 +187,13 @@ void LBM::TMS_BC()
                         std::vector <double> Y (gas->nSpecies());
                         for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = rhoa_out[a] / rho_out;
                         gas->setMassFractions(&Y[0]);   
-                        gas->setState_TP(units.si_temp(T_out), units.si_p(p_out));
+                        // gas->setState_TP(units.si_temp(T_out), units.si_p(p_out));
 
-                        rho_out = units.rho(gas->density());
-                        for(size_t a = 0; a < nSpecies; ++a) rhoa_out[a] = Y[gas->speciesIndex(speciesName[a])] * rho_out;
+                        // rho_out = units.rho(gas->density());
+                        // for(size_t a = 0; a < nSpecies; ++a) rhoa_out[a] = Y[gas->speciesIndex(speciesName[a])] * rho_out;
+
+                        gas->setState_DP(units.si_rho(rho_out), units.si_p(p_out));
+                        T_out = units.temp(gas->temperature());
                     }
                     else if( mixture[i_bdr][j_bdr][k_bdr].type == TYPE_O_C){
                         double sigma = 5.0;

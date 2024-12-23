@@ -2848,7 +2848,7 @@ void main_setup() // Perfectly stirred reactor ---------------------------------
         }
     }
 
-    lb.run(1000000000,100);
+    lb.run(1000000000,1000);
 
     // LBM lb = read_restart("restart840000.dat");
     // lb.loop(840001, 1);

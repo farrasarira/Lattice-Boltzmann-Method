@@ -76,10 +76,10 @@ LBM::LBM(int Nx, int Ny, int Nz, std::vector<std::string> species)
     for(int i = 0; i < nThreads; ++i)
     {
         // auto sol = Cantera::newSolution("gri30.yaml", "gri30","mixture-averaged");
-        // auto sol = Cantera::newSolution("h2o2.yaml", "ohmech");
+        auto sol = Cantera::newSolution("h2o2.yaml", "ohmech");
         // auto sol = Cantera::newSolution("gri30.yaml", "gri30", "multicomponent");
         // auto sol = Cantera::newSolution("./src/reaction-mech/one-step.yaml", "FakeGas");
-        auto sol = Cantera::newSolution("./src/reaction-mech/CH4_2S.yaml", "CH4_BFER_multi");
+        // auto sol = Cantera::newSolution("./src/reaction-mech/CH4_2S.yaml", "CH4_BFER_multi");
         // auto sol = Cantera::newSolution("./src/reaction-mech/propane_mech.yaml");
         sols.push_back(sol);
     }
@@ -124,23 +124,23 @@ void LBM::loop(int nstep, int tout)
         // double start = omp_get_wtime();
         #ifdef MULTICOMP
         Collide_Species();  // collide species distribution function
-        std::cout << "  Species Collision Done" << std::endl;
+        // std::cout << "  Species Collision Done" << std::endl;
         #endif
         // std::cout << "Collision species     : " << double(omp_get_wtime()-start) << " seconds" << std::endl;
 
         // start = omp_get_wtime();
         Collide();   // collision step
-        std::cout << "  Mixture Collision Done" << std::endl;
+        // std::cout << "  Mixture Collision Done" << std::endl;
         // std::cout << "Collision mixture     : " << double(omp_get_wtime()-start) << " seconds" << std::endl;
 
         // start = omp_get_wtime();
         Streaming();        // streaming step & BC
-        std::cout << "  Streaming Done" << std::endl;
+        // std::cout << "  Streaming Done" << std::endl;
         // std::cout << "Streaming process     : " << double(omp_get_wtime()-start) << " seconds" << std::endl;
 
         // start = omp_get_wtime();
         TMS_BC();
-        std::cout << "  Apply BC Done" << std::endl;  
+        // std::cout << "  Apply BC Done" << std::endl;  
         // std::cout << "TMS BC                : " << double(omp_get_wtime()-start) << " seconds" << std::endl;
                 
         // start = omp_get_wtime();
@@ -149,7 +149,7 @@ void LBM::loop(int nstep, int tout)
         #else
             calculate_moment(); // calculate moment
         #endif
-        std::cout << "  Calculate Moment Done" << std::endl;
+        // std::cout << "  Calculate Moment Done" << std::endl;
         // std::cout << "Moment                : " << double(omp_get_wtime()-start) << " seconds" << std::endl;
         
 
