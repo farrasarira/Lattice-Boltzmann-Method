@@ -44,12 +44,12 @@
     // #define COFLOW_FLAME
     // #define OPPOSED_JET_FLAME
     // #define PREMIXED_JET_FLAME
-    #define MICROCHANNEL_FLAME
+    // #define MICROCHANNEL_FLAME
     // #define CIRCULAR_FLAME
     // #define HEATED_OBSTACLE
     // #define HEAT_LID_DRIVEN
     // #define HEAT_LID_DRIVEN_MULTICOMP
-    // #define DARIUS_LANDAW
+    #define DARIUS_LANDAW
     // #define FLAME_VORTEX
     
     // ################ ISOTHERMAL ###################
