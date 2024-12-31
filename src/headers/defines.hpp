@@ -44,13 +44,14 @@
     // #define COFLOW_FLAME
     // #define OPPOSED_JET_FLAME
     // #define PREMIXED_JET_FLAME
-    // #define MICROCHANNEL_FLAME
+    #define MICROCHANNEL_FLAME
     // #define CIRCULAR_FLAME
     // #define HEATED_OBSTACLE
     // #define HEAT_LID_DRIVEN
     // #define HEAT_LID_DRIVEN_MULTICOMP
-    #define DARIUS_LANDAW
+    // #define DARIUS_LANDAW
     // #define FLAME_VORTEX
+    // #define ACCOUSTIC_WAVE_1D
     
     // ################ ISOTHERMAL ###################
     // #define ISOTHERM
@@ -74,7 +75,9 @@
     #define NUM_THREADS 10
 
     // ############### OUTPUT UNIT ###################
-    // #define OUTPUT_SI               // uncomment for SI UNIT, comment for LATTICE UNIT
+    #define OUTPUT_SI               // uncomment for SI UNIT, comment for LATTICE UNIT
+    #define OUTPUT_MASSFRAC         // Output Species in Mass Fraction (Default : Mole Fraction)
+
 
     // ########### RESTART FILE METHOD ###############
     // #define RESTART_O_DIRECT         // For fast computation but cannot be used for large file
@@ -105,12 +108,12 @@
     #elif defined AA
         #define D2Q9
         #define NDIM 2
-    #elif defined TAYLOR_GREEN_2D || defined TAYLOR_GREEN_3D || defined CHANNEL_FLOW_3D || defined CYLINDER_3D || defined VISCOSITY_TEST || defined CONDUCTIVITY_TEST || defined SOUNDSPEED_TEST || defined SOD_SHOCK || defined TERNARY_DIFFUSION || defined SOD_SHOCK_SIUNIT || defined SHEAR_LAYER_MULTICOMP || defined PERFECTLY_STIRRED_REACTOR_3D || defined CYLINDER_2D || defined CONDUCTION_1D || defined BPVT_1 || defined COUETTE_FLOW || defined COUETTE_FLOW_MULTICOMP || defined TAYLOR_GREEN_3D_MULTICOMP || defined SHEAR_LAYER || defined SHOCK_VORTEX_INTERAC || defined RB_INSTABILITY || defined CONDUCTION_BLACK || defined RB_INSTABILITY_MULTICOMP || defined VISCOSITY_TEST_MULTICOMP || defined VISCOSITY_TEST_ROTATED || defined OPPOSED_JET || defined POINT_COMBUSTION_2D || defined FLAME_SPEED || defined PREMIXED_LAMINAR_FLAME_2D || defined OPPOSED_JET_MULTICOMP || defined CONVECTED_VORTEX || defined COFLOW_FLAME || defined OPPOSED_JET_FLAME || defined PREMIXED_JET_FLAME || defined MICROCHANNEL_FLAME || defined CIRCULAR_FLAME || defined HEATED_OBSTACLE || defined HEAT_LID_DRIVEN || defined HEAT_LID_DRIVEN_MULTICOMP || defined DARIUS_LANDAW || defined FLAME_VORTEX
+    #elif defined TAYLOR_GREEN_2D || defined TAYLOR_GREEN_3D || defined CHANNEL_FLOW_3D || defined CYLINDER_3D || defined VISCOSITY_TEST || defined CONDUCTIVITY_TEST || defined SOUNDSPEED_TEST || defined SOD_SHOCK || defined TERNARY_DIFFUSION || defined SOD_SHOCK_SIUNIT || defined SHEAR_LAYER_MULTICOMP || defined PERFECTLY_STIRRED_REACTOR_3D || defined CYLINDER_2D || defined CONDUCTION_1D || defined BPVT_1 || defined COUETTE_FLOW || defined COUETTE_FLOW_MULTICOMP || defined TAYLOR_GREEN_3D_MULTICOMP || defined SHEAR_LAYER || defined SHOCK_VORTEX_INTERAC || defined RB_INSTABILITY || defined CONDUCTION_BLACK || defined RB_INSTABILITY_MULTICOMP || defined VISCOSITY_TEST_MULTICOMP || defined VISCOSITY_TEST_ROTATED || defined OPPOSED_JET || defined POINT_COMBUSTION_2D || defined FLAME_SPEED || defined PREMIXED_LAMINAR_FLAME_2D || defined OPPOSED_JET_MULTICOMP || defined CONVECTED_VORTEX || defined COFLOW_FLAME || defined OPPOSED_JET_FLAME || defined PREMIXED_JET_FLAME || defined MICROCHANNEL_FLAME || defined CIRCULAR_FLAME || defined HEATED_OBSTACLE || defined HEAT_LID_DRIVEN || defined HEAT_LID_DRIVEN_MULTICOMP || defined DARIUS_LANDAW || defined FLAME_VORTEX || defined ACCOUSTIC_WAVE_1D
         #define D3Q27
         #define NDIM 3
     #endif
 
-    #if defined TERNARY_DIFFUSION || defined SOD_SHOCK_SIUNIT || defined SHEAR_LAYER_MULTICOMP || defined PERFECTLY_STIRRED_REACTOR_3D || defined CONDUCTION_1D || defined COUETTE_FLOW_MULTICOMP || defined TAYLOR_GREEN_3D_MULTICOMP || defined RB_INSTABILITY_MULTICOMP || defined VISCOSITY_TEST_MULTICOMP || defined POINT_COMBUSTION_2D || defined FLAME_SPEED || defined PREMIXED_LAMINAR_FLAME_2D || defined OPPOSED_JET_MULTICOMP || defined CONVECTED_VORTEX || defined COFLOW_FLAME || defined OPPOSED_JET_FLAME || defined PREMIXED_JET_FLAME || defined MICROCHANNEL_FLAME || defined CIRCULAR_FLAME || defined HEAT_LID_DRIVEN_MULTICOMP || defined DARIUS_LANDAW || defined FLAME_VORTEX
+    #if defined TERNARY_DIFFUSION || defined SOD_SHOCK_SIUNIT || defined SHEAR_LAYER_MULTICOMP || defined PERFECTLY_STIRRED_REACTOR_3D || defined CONDUCTION_1D || defined COUETTE_FLOW_MULTICOMP || defined TAYLOR_GREEN_3D_MULTICOMP || defined RB_INSTABILITY_MULTICOMP || defined VISCOSITY_TEST_MULTICOMP || defined POINT_COMBUSTION_2D || defined FLAME_SPEED || defined PREMIXED_LAMINAR_FLAME_2D || defined OPPOSED_JET_MULTICOMP || defined CONVECTED_VORTEX || defined COFLOW_FLAME || defined OPPOSED_JET_FLAME || defined PREMIXED_JET_FLAME || defined MICROCHANNEL_FLAME || defined CIRCULAR_FLAME || defined HEAT_LID_DRIVEN_MULTICOMP || defined DARIUS_LANDAW || defined FLAME_VORTEX || defined ACCOUSTIC_WAVE_1D
         #define MULTICOMP
     #endif
 

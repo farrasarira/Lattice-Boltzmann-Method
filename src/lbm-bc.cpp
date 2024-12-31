@@ -3,6 +3,7 @@
 #include <omp.h>
 #include "units.hpp"
 #include "FD.hpp"
+#include "impose_nscbc.hpp"
 
 void LBM::fill_BC()
 {
@@ -196,190 +197,35 @@ void LBM::TMS_BC()
                         T_out = units.temp(gas->temperature());
                     }
                     else if( mixture[i_bdr][j_bdr][k_bdr].type == TYPE_O_C){
-                        double sigma = 5.0;
+                        impose_NSCBC(*this, i, j, k, l_interface, rho_out, rhoa_out, vel_out, T_out); 
 
-                        int rank = omp_get_thread_num();
-                        auto gas = sols[rank]->thermo();   
-                        std::vector <double> Y (gas->nSpecies());
-                        for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = species[a][i][j][k].rho / mixture[i][j][k].rho;
-                        gas->setMassFractions(&Y[0]);
-                        gas->setState_DP(units.si_rho(mixture[i][j][k].rho), units.si_p(mixture[i][j][k].p));
+                        // vel_out[0] = mixture[(int)(i)][(int)(j)][(int)(k)].u;
+                        // vel_out[1] = mixture[(int)(i)][(int)(j)][(int)(k)].v;
+                        // vel_out[2] = mixture[(int)(i)][(int)(j)][(int)(k)].w;
+                        // T_out      = mixture[(int)(i)][(int)(j)][(int)(k)].temp;
+                        // rho_out    = mixture[(int)(i)][(int)(j)][(int)(k)].rho;
+                        // for(size_t a = 0; a < nSpecies; ++a){
+                        //     rhoa_out[a]    = species[a][(int)(i)][(int)(j)][(int)(k)].rho;
+                        //     vela_out[a][0] = species[a][(int)(i)][(int)(j)][(int)(k)].u;
+                        //     vela_out[a][1] = species[a][(int)(i)][(int)(j)][(int)(k)].v;
+                        //     vela_out[a][2] = species[a][(int)(i)][(int)(j)][(int)(k)].w;
+                        // }
+                        
+                        // p_out = mixture[(int)(i)][(int)(j)][(int)(k)].p;
+                        // // p_out = mixture[(int)(i+cx[l_interface])][(int)(j+cy[l_interface])][(int)(k+cz[l_interface])].p;
 
-                        int i_1 = i + cx[l_interface];
-                        int j_1 = j + cy[l_interface];
-                        int k_1 = k + cz[l_interface];
-                        int i_2 = i + 2*cx[l_interface];
-                        int j_2 = j + 2*cy[l_interface];
-                        int k_2 = k + 2*cz[l_interface];
-                        double spd_sound = units.u(gas->soundSpeed());
+                        // int rank = omp_get_thread_num();
+                        // auto gas = sols[rank]->thermo();   
+                        // std::vector <double> Y (gas->nSpecies());
+                        // for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = rhoa_out[a] / rho_out;
+                        // gas->setMassFractions(&Y[0]);   
+                        // // gas->setState_TP(units.si_temp(T_out), units.si_p(p_out));
 
-                        if (cx[l_interface] != 0.0){
-                            double drho_dx  = fd_uw(mixture[i][j][k].rho   , mixture[i_1][j_1][k_1].rho, mixture[i_2][j_2][k_2].rho, dx, cx[l_interface]) ;
-                            double du_dx    = fd_uw(mixture[i][j][k].u     , mixture[i_1][j_1][k_1].u  , mixture[i_2][j_2][k_2].u  , dx, cx[l_interface]) ;
-                            double dv_dx    = fd_uw(mixture[i][j][k].v     , mixture[i_1][j_1][k_1].v  , mixture[i_2][j_2][k_2].v  , dx, cx[l_interface]) ;
-                            double dw_dx    = fd_uw(mixture[i][j][k].w     , mixture[i_1][j_1][k_1].w  , mixture[i_2][j_2][k_2].w  , dx, cx[l_interface]) ;
-                            double dp_dx    = fd_uw(mixture[i][j][k].p     , mixture[i_1][j_1][k_1].p  , mixture[i_2][j_2][k_2].p  , dx, cx[l_interface]) ;
-                            double dYa_dx[nSpecies] = {};
-                            for(size_t a = 0; a < nSpecies; ++a){
-                                dYa_dx[a] = fd_uw(species[a][i][j][k].rho/mixture[i][j][k].rho, species[a][i_1][j_1][k_1].rho/mixture[i_1][j_1][k_1].rho, species[a][i_2][j_2][k_2].rho/mixture[i_2][j_2][k_2].rho, dx, cx[l_interface]);                            
-                            }
+                        // // rho_out = units.rho(gas->density());
+                        // // for(size_t a = 0; a < nSpecies; ++a) rhoa_out[a] = Y[gas->speciesIndex(speciesName[a])] * rho_out;
 
-                            double lambda_1 = mixture[i][j][k].u - spd_sound;
-                            double lambda_2 = mixture[i][j][k].u;
-                            double lambda_3 = mixture[i][j][k].u;
-                            double lambda_4 = mixture[i][j][k].u;
-                            double lambda_5 = mixture[i][j][k].u + spd_sound;
-
-                            double L1 = lambda_1*(dp_dx - mixture[i][j][k].rho*spd_sound*du_dx);
-                            double L2 = lambda_2*(spd_sound*spd_sound*drho_dx - dp_dx);
-                            double L3 = lambda_3*(dv_dx);
-                            double L4 = lambda_4*(dw_dx);
-                            double L5 = lambda_5*(dp_dx + mixture[i][j][k].rho*spd_sound*du_dx);
-
-                            double relax_K = sigma*spd_sound*(1.0 - (mixture[i][j][k].u/spd_sound)*(mixture[i][j][k].u/spd_sound))/Nx;
-
-                            if(cx[l_interface] > 0) // left boundary
-                                L5 = relax_K * ( mixture[i][j][k].p -  mixture[i_bdr][j_bdr][k_bdr].p);
-                            else // right boundary
-                                L1 = relax_K * ( mixture[i][j][k].p -  mixture[i_bdr][j_bdr][k_bdr].p);
-
-                            double d1 = 1.0/(spd_sound*spd_sound) * (L2+0.5*(L5+L1));
-                            double d2 = 1.0/(2.0*mixture[i][j][k].rho*spd_sound) * (L5-L1);
-                            double d3 = L3;
-                            double d4 = L4;
-                            double d5 = 0.5*(L5+L1);
-                            // double d6 = mixture[i][j][k].temp/(mixture[i][j][k].rho*spd_sound*spd_sound) * (-L2+0.5*(gas->cp_mass()/gas->cv_mass()-1.0)*(L5+L1) );
-
-                            // rho_out    = mixture[i_1][j_1][k_1].rho;
-                            // vel_out[0] = mixture[i_1][j_1][k_1].u;
-                            // vel_out[1] = mixture[i_1][j_1][k_1].v;
-                            // vel_out[2] = mixture[i_1][j_1][k_1].w;
-                            // for(size_t a = 0; a < nSpecies; ++a)
-                            //     rhoa_out[a]    = species[a][i_1][j_1][k_1].rho;
-                            // p_out = mixture[i_bdr][j_bdr][k_bdr].p;
-
-                            rho_out    = mixture[i][j][k].rho - dt_sim*d1;
-                            vel_out[0] = mixture[i][j][k].u - dt_sim*d2;
-                            vel_out[1] = mixture[i][j][k].v - dt_sim*d3;
-                            vel_out[2] = mixture[i][j][k].w - dt_sim*d4;
-                            p_out      = mixture[i][j][k].p - dt_sim*d5;
-                            // T_out      = mixture[i][j][k].temp - dt_sim*d6;
-                            for(size_t a = 0; a < nSpecies; ++a){
-                                rhoa_out[a] = (species[a][i][j][k].rho/mixture[i][j][k].rho - dt_sim*mixture[i][j][k].u*dYa_dx[a]) * rho_out;
-                                // rho_out = rho_out + dt_sim*mixture[i][j][k].u*dYa_dx[a]*mixture[i][j][k].rho;
-                            }
-
-                        }
-                        else if (cy[l_interface] != 0.0){
-                            double drho_dx  = fd_uw(mixture[i][j][k].rho   , mixture[i_1][j_1][k_1].rho, mixture[i_2][j_2][k_2].rho, dy, cy[l_interface]) ;
-                            double du_dx    = fd_uw(mixture[i][j][k].u     , mixture[i_1][j_1][k_1].u  , mixture[i_2][j_2][k_2].u  , dy, cy[l_interface]) ;
-                            double dv_dx    = fd_uw(mixture[i][j][k].v     , mixture[i_1][j_1][k_1].v  , mixture[i_2][j_2][k_2].v  , dy, cy[l_interface]) ;
-                            double dw_dx    = fd_uw(mixture[i][j][k].w     , mixture[i_1][j_1][k_1].w  , mixture[i_2][j_2][k_2].w  , dy, cy[l_interface]) ;
-                            double dp_dx    = fd_uw(mixture[i][j][k].p     , mixture[i_1][j_1][k_1].p  , mixture[i_2][j_2][k_2].p  , dy, cy[l_interface]) ;
-                            double dYa_dx[nSpecies] = {};
-                            for(size_t a = 0; a < nSpecies; ++a){
-                                dYa_dx[a] = fd_uw(species[a][i][j][k].rho/mixture[i][j][k].rho, species[a][i_1][j_1][k_1].rho/mixture[i_1][j_1][k_1].rho, species[a][i_2][j_2][k_2].rho/mixture[i_2][j_2][k_2].rho, dy, cy[l_interface]);
-                            }
-
-                            double lambda_1 = mixture[i][j][k].v - spd_sound;
-                            double lambda_2 = mixture[i][j][k].v;
-                            double lambda_3 = mixture[i][j][k].v;
-                            double lambda_4 = mixture[i][j][k].v;
-                            double lambda_5 = mixture[i][j][k].v + spd_sound;
-
-                            double L1 = lambda_1*(dp_dx - mixture[i][j][k].rho*spd_sound*dv_dx);
-                            double L2 = lambda_2*(spd_sound*spd_sound*drho_dx - dp_dx);
-                            double L3 = lambda_3*(dw_dx);
-                            double L4 = lambda_4*(du_dx);
-                            double L5 = lambda_5*(dp_dx + mixture[i][j][k].rho*spd_sound*dv_dx);
-
-                            double relax_K = sigma*spd_sound*(1.0 - (mixture[i][j][k].v/spd_sound)*(mixture[i][j][k].v/spd_sound))/Ny;
-
-                            if(cy[l_interface] > 0) // left boundary
-                                L5 = relax_K * ( mixture[i][j][k].p -  mixture[i_bdr][j_bdr][k_bdr].p);
-                            else // right boundary
-                                L1 = relax_K * ( mixture[i][j][k].p -  mixture[i_bdr][j_bdr][k_bdr].p);
-
-                            double d1 = 1.0/(spd_sound*spd_sound) * (L2+0.5*(L5+L1));
-                            double d2 = 1.0/(2.0*mixture[i][j][k].rho*spd_sound) * (L5-L1);
-                            double d3 = L3;
-                            double d4 = L4;
-                            double d5 = 0.5*(L5+L1);
-
-                            // rho_out    = mixture[i_1][j_1][k_1].rho;
-                            // vel_out[0] = mixture[i_1][j_1][k_1].u;
-                            // vel_out[1] = mixture[i_1][j_1][k_1].v;
-                            // vel_out[2] = mixture[i_1][j_1][k_1].w;
-                            // for(size_t a = 0; a < nSpecies; ++a)
-                            //     rhoa_out[a]    = species[a][i_1][j_1][k_1].rho;
-                            // p_out = mixture[i_bdr][j_bdr][k_bdr].p;
-
-                            rho_out    = mixture[i][j][k].rho - dt_sim*d1;
-                            vel_out[1] = mixture[i][j][k].v - dt_sim*d2;
-                            vel_out[2] = mixture[i][j][k].w - dt_sim*d3;
-                            vel_out[0] = mixture[i][j][k].u - dt_sim*d4;
-                            p_out      = mixture[i][j][k].p - dt_sim*d5;
-                            for(size_t a = 0; a < nSpecies; ++a)
-                                rhoa_out[a] = (species[a][i][j][k].rho/mixture[i][j][k].rho - dt_sim*mixture[i][j][k].v*dYa_dx[a]) * rho_out;
-                        }
-                        else if (cz[l_interface] != 0.0){
-                            double drho_dx  = fd_uw(mixture[i][j][k].rho   , mixture[i_1][j_1][k_1].rho, mixture[i_2][j_2][k_2].rho, dz, cz[l_interface]) ;
-                            double du_dx    = fd_uw(mixture[i][j][k].u     , mixture[i_1][j_1][k_1].u  , mixture[i_2][j_2][k_2].u  , dz, cz[l_interface]) ;
-                            double dv_dx    = fd_uw(mixture[i][j][k].v     , mixture[i_1][j_1][k_1].v  , mixture[i_2][j_2][k_2].v  , dz, cz[l_interface]) ;
-                            double dw_dx    = fd_uw(mixture[i][j][k].w     , mixture[i_1][j_1][k_1].w  , mixture[i_2][j_2][k_2].w  , dz, cz[l_interface]) ;
-                            double dp_dx    = fd_uw(mixture[i][j][k].p     , mixture[i_1][j_1][k_1].p  , mixture[i_2][j_2][k_2].p  , dz, cz[l_interface]) ;
-                            double dYa_dx[nSpecies] = {};
-                            for(size_t a = 0; a < nSpecies; ++a){
-                                dYa_dx[a] = fd_uw(species[a][i][j][k].rho/mixture[i][j][k].rho, species[a][i_1][j_1][k_1].rho/mixture[i_1][j_1][k_1].rho, species[a][i_2][j_2][k_2].rho/mixture[i_2][j_2][k_2].rho, dz, cz[l_interface]);
-                            }
-
-                            double lambda_1 = mixture[i][j][k].w - spd_sound;
-                            double lambda_2 = mixture[i][j][k].w;
-                            double lambda_3 = mixture[i][j][k].w;
-                            double lambda_4 = mixture[i][j][k].w;
-                            double lambda_5 = mixture[i][j][k].w + spd_sound;
-
-                            double L1 = lambda_1*(dp_dx - mixture[i][j][k].rho*spd_sound*dw_dx);
-                            double L2 = lambda_2*(spd_sound*spd_sound*drho_dx - dp_dx);
-                            double L3 = lambda_3*(du_dx);
-                            double L4 = lambda_4*(dv_dx);
-                            double L5 = lambda_5*(dp_dx + mixture[i][j][k].rho*spd_sound*dw_dx);
-
-                            double relax_K = sigma*spd_sound*(1.0 - (mixture[i][j][k].w/spd_sound)*(mixture[i][j][k].w/spd_sound))/Nz;
-
-                            if(cy[l_interface] > 0) // left boundary
-                                L5 = relax_K * ( mixture[i][j][k].p -  mixture[i_bdr][j_bdr][k_bdr].p);
-                            else // right boundary
-                                L1 = relax_K * ( mixture[i][j][k].p -  mixture[i_bdr][j_bdr][k_bdr].p);
-
-                            double d1 = 1.0/(spd_sound*spd_sound) * (L2+0.5*(L5+L1));
-                            double d2 = 1.0/(2.0*mixture[i][j][k].rho*spd_sound) * (L5-L1);
-                            double d3 = L3;
-                            double d4 = L4;
-                            double d5 = 0.5*(L5+L1);
-
-                            // rho_out    = mixture[i_1][j_1][k_1].rho;
-                            // vel_out[0] = mixture[i_1][j_1][k_1].u;
-                            // vel_out[1] = mixture[i_1][j_1][k_1].v;
-                            // vel_out[2] = mixture[i_1][j_1][k_1].w;
-                            // for(size_t a = 0; a < nSpecies; ++a)
-                            //     rhoa_out[a]    = species[a][i_1][j_1][k_1].rho;
-                            // p_out = mixture[i_bdr][j_bdr][k_bdr].p;
-
-                            rho_out    = mixture[i][j][k].rho - dt_sim*d1;
-                            vel_out[2] = mixture[i][j][k].w - dt_sim*d2;
-                            vel_out[0] = mixture[i][j][k].u - dt_sim*d3;
-                            vel_out[1] = mixture[i][j][k].v - dt_sim*d4;
-                            p_out      = mixture[i][j][k].p - dt_sim*d5;
-                            for(size_t a = 0; a < nSpecies; ++a)
-                                rhoa_out[a] = (species[a][i][j][k].rho/mixture[i][j][k].rho - dt_sim*mixture[i][j][k].w*dYa_dx[a]) * rho_out;
-                        }
-
-                        std::fill(Y.begin(), Y.end(), 0.0);
-                        for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = rhoa_out[a] / rho_out;
-                        gas->setMassFractions(&Y[0]);   
-                        gas->setState_DP(units.si_rho(rho_out), units.si_p(p_out));
-                        T_out = units.temp(gas->temperature());                        
+                        // gas->setState_DP(units.si_rho(rho_out), units.si_p(p_out));
+                        // T_out = units.temp(gas->temperature());
                     }
 
                     // calculate_feq_geq(fa_out, g_out, rho_out, rhoa_out, vel_out, vela_out, T_out);
@@ -453,8 +299,7 @@ void LBM::TMS_BC()
                     double internalEnergy=rhoe_loc/rho_loc;// - 0.5*v_sqr(vel_loc[0], vel_loc[1], vel_loc[2]); 
                     for (size_t a = 0; a < nSpecies; ++a){
                         internalEnergy = internalEnergy - 0.5 * rhoa_loc[a]/rho_loc * v_sqr(vela_loc[a][0], vela_loc[a][1], vela_loc[a][2]);
-                    }     
-                    // double internalEnergy=rhoe_loc/rho_loc - 0.5*v_sqr(vel_loc[0], vel_loc[1], vel_loc[2]); 
+                    }                 
                     double T_loc = calculate_temp(internalEnergy, rho_loc, rhoa_loc);
                     #else
                     double T_loc = T_out;
