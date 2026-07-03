@@ -186,7 +186,7 @@ void LBM::TMS_BC()
                         int rank = omp_get_thread_num();
                         auto gas = sols[rank]->thermo();   
                         std::vector <double> Y (gas->nSpecies());
-                        for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = rhoa_out[a] / rho_out;
+                        for(size_t a = 0; a < nSpecies; ++a) Y[speciesIdx[a]] = rhoa_out[a] / rho_out;
                         gas->setMassFractions(&Y[0]);   
                         // gas->setState_TP(units.si_temp(T_out), units.si_p(p_out));
 
@@ -522,7 +522,7 @@ void LBM::TMS_BC()
                             int rank = omp_get_thread_num();
                             auto gas = sols[rank]->thermo();   
                             std::vector <double> Y (gas->nSpecies());
-                            for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = species[a][i][j][k].rho / mixture[i][j][k].rho;
+                            for(size_t a = 0; a < nSpecies; ++a) Y[speciesIdx[a]] = species[a][i][j][k].rho / mixture[i][j][k].rho;
                             gas->setMassFractions(&Y[0]);
                             gas->setState_DP(units.si_rho(mixture[i][j][k].rho), units.si_p(mixture[i][j][k].p));
 
@@ -670,7 +670,7 @@ void LBM::TMS_BC()
                             }
 
                             std::fill(Y.begin(), Y.end(), 0.0);
-                            for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = rhoa_in[a] / rho_in;
+                            for(size_t a = 0; a < nSpecies; ++a) Y[speciesIdx[a]] = rhoa_in[a] / rho_in;
                             gas->setMassFractions(&Y[0]);   
                             gas->setState_DP(units.si_rho(rho_in), units.si_p(p_in));
                             T_in = units.temp(gas->temperature());
@@ -680,12 +680,12 @@ void LBM::TMS_BC()
                         int rank = omp_get_thread_num();
                         auto gas = sols[rank]->thermo();   
                         std::vector <double> Y (gas->nSpecies());
-                        for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = rhoa_in[a] / rho_in;
+                        for(size_t a = 0; a < nSpecies; ++a) Y[speciesIdx[a]] = rhoa_in[a] / rho_in;
                         gas->setMassFractions(&Y[0]);   
                         gas->setState_TP(units.si_temp(T_in), units.si_p(p_in));
 
                         rho_in = units.rho(gas->density());
-                        for(size_t a = 0; a < nSpecies; ++a) rhoa_in[a] = Y[gas->speciesIndex(speciesName[a])] * rho_in;
+                        for(size_t a = 0; a < nSpecies; ++a) rhoa_in[a] = Y[speciesIdx[a]] * rho_in;
 
 
                         // std::cout << i << " | " << vel_in[0] << " | " << T_in << std::endl;

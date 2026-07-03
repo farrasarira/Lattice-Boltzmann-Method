@@ -21,14 +21,15 @@ LBM::LBM(int Nx, int Ny, int Nz, double nu)
     this->Nz = Nz + 2;
     this->nu = nu;
 
-    // allocate memory for lattice
+    // allocate memory for lattice (one contiguous block + pointer tables for [i][j][k] indexing)
+    mixture_data = new MIXTURE [(size_t)this->Nx * this->Ny * this->Nz];
     mixture = new MIXTURE **[this->Nx];
     for (int i = 0; i < this->Nx; ++i)
     {
         mixture[i] = new MIXTURE *[this->Ny];
         for (int j = 0; j < this->Ny; ++j)
         {
-            mixture[i][j] = new MIXTURE [this->Nz];
+            mixture[i][j] = mixture_data + ((size_t)i * this->Ny + j) * this->Nz;
         }
     }
 }
@@ -44,28 +45,32 @@ LBM::LBM(int Nx, int Ny, int Nz, std::vector<std::string> species)
     this->speciesName = species;
     this->nSpecies = species.size();
 
-    // allocate memory for mixture
+    // allocate memory for mixture (one contiguous block + pointer tables for [i][j][k] indexing)
+    const size_t ncell = (size_t)this->Nx * this->Ny * this->Nz;
+    mixture_data = new MIXTURE [ncell];
     mixture = new MIXTURE **[this->Nx];
     for (int i = 0; i < this->Nx; ++i)
     {
         mixture[i] = new MIXTURE *[this->Ny];
         for (int j = 0; j < this->Ny; ++j)
         {
-            mixture[i][j] = new MIXTURE [this->Nz];
+            mixture[i][j] = mixture_data + ((size_t)i * this->Ny + j) * this->Nz;
         }
     }
 
-    // allocate memory for species
+    // allocate memory for species (one contiguous block per species)
     this->species.resize(nSpecies);
+    this->species_data.resize(nSpecies);
     for(size_t p = 0; p < nSpecies; ++p)
     {
+        this->species_data[p] = new SPECIES [ncell];
         this->species[p] = new SPECIES **[this->Nx];
         for (int i = 0; i < this->Nx; ++i)
         {
             this->species[p][i] = new SPECIES *[this->Ny];
             for (int j = 0; j < this->Ny; ++j)
             {
-                this->species[p][i][j] = new SPECIES [this->Nz];
+                this->species[p][i][j] = this->species_data[p] + ((size_t)i * this->Ny + j) * this->Nz;
             }
         }
     }
@@ -84,6 +89,17 @@ LBM::LBM(int Nx, int Ny, int Nz, std::vector<std::string> species)
         sols.push_back(sol);
     }
 
+    // Precompute the Cantera species indices and molecular weights once,
+    // so the hot loops don't have to do string lookups for every lattice cell
+    auto gas = sols[0]->thermo();
+    nSpeciesCantera = gas->nSpecies();
+    speciesIdx.resize(nSpecies);
+    molarMass.resize(nSpecies);
+    for(size_t a = 0; a < nSpecies; ++a)
+    {
+        speciesIdx[a] = gas->speciesIndex(speciesName[a]);
+        molarMass[a] = gas->molecularWeight(speciesIdx[a]);
+    }
 }
 #endif
 
