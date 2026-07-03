@@ -38,10 +38,10 @@ void LBM::calculate_moment()
                         rhov+=mixture[i][j][k].f[l]*cy[l];
                         rhow+=mixture[i][j][k].f[l]*cz[l];
                         
-                        double velocity_set[3] = {cx[l], cy[l], cz[l]};
+                        double velocity_set[3] = {(double)cx[l], (double)cy[l], (double)cz[l]};
 
-                        for(int p=0; p < 3; ++p)
-                            for(int q=0; q < 3; ++q)
+                        for(int p=0; p < 3; ++p)   // tensor is symmetric: accumulate the upper triangle only
+                            for(int q=p; q < 3; ++q)
                                 mixture[i][j][k].p_tensor[p][q] += mixture[i][j][k].f[l]*velocity_set[p]*velocity_set[q];
 
                         #ifndef ISOTHERM
@@ -51,6 +51,10 @@ void LBM::calculate_moment()
                         heat_flux_z += mixture[i][j][k].g[l]*cz[l];
                         #endif
                     }
+
+                    mixture[i][j][k].p_tensor[1][0] = mixture[i][j][k].p_tensor[0][1];
+                    mixture[i][j][k].p_tensor[2][0] = mixture[i][j][k].p_tensor[0][2];
+                    mixture[i][j][k].p_tensor[2][1] = mixture[i][j][k].p_tensor[1][2];
 
                     mixture[i][j][k].rho = rho;
                     mixture[i][j][k].u = rhou / rho;
@@ -143,10 +147,10 @@ void LBM::calculate_moment_point(int i, int j, int k)
         rhov+=mixture[i][j][k].f[l]*cy[l];
         rhow+=mixture[i][j][k].f[l]*cz[l];
         
-        double velocity_set[3] = {cx[l], cy[l], cz[l]};
+        double velocity_set[3] = {(double)cx[l], (double)cy[l], (double)cz[l]};
 
-        for(int p=0; p < 3; ++p)
-            for(int q=0; q < 3; ++q)
+        for(int p=0; p < 3; ++p)   // tensor is symmetric: accumulate the upper triangle only
+            for(int q=p; q < 3; ++q)
                 mixture[i][j][k].p_tensor[p][q] += mixture[i][j][k].f[l]*velocity_set[p]*velocity_set[q];
 
         #ifndef ISOTHERM
@@ -156,6 +160,10 @@ void LBM::calculate_moment_point(int i, int j, int k)
         heat_flux_z += mixture[i][j][k].g[l]*cz[l];
         #endif
     }
+
+    mixture[i][j][k].p_tensor[1][0] = mixture[i][j][k].p_tensor[0][1];
+    mixture[i][j][k].p_tensor[2][0] = mixture[i][j][k].p_tensor[0][2];
+    mixture[i][j][k].p_tensor[2][1] = mixture[i][j][k].p_tensor[1][2];
 
     mixture[i][j][k].rho = rho;
     mixture[i][j][k].u = rhou / rho;
@@ -253,10 +261,10 @@ void LBM::calculate_moment()
                             rhov_a[a] += species[a][i][j][k].f[l]*cy[l];
                             rhow_a[a] += species[a][i][j][k].f[l]*cz[l];
 
-                            double velocity_set[3] = {cx[l], cy[l], cz[l]};
+                            double velocity_set[3] = {(double)cx[l], (double)cy[l], (double)cz[l]};
 
-                            for(int p=0; p < 3; ++p)
-                                for(int q=0; q < 3; ++q)
+                            for(int p=0; p < 3; ++p)   // tensor is symmetric: accumulate the upper triangle only
+                                for(int q=p; q < 3; ++q)
                                     mixture[i][j][k].p_tensor[p][q] += species[a][i][j][k].f[l]*velocity_set[p]*velocity_set[q];
                         }
                         if (rho_a[a] > SPECIES_MIN)
@@ -280,6 +288,10 @@ void LBM::calculate_moment()
                         rhov += rhov_a[a];
                         rhow += rhow_a[a];
                     }
+
+                    mixture[i][j][k].p_tensor[1][0] = mixture[i][j][k].p_tensor[0][1];
+                    mixture[i][j][k].p_tensor[2][0] = mixture[i][j][k].p_tensor[0][2];
+                    mixture[i][j][k].p_tensor[2][1] = mixture[i][j][k].p_tensor[1][2];
 
                     mixture[i][j][k].rho = rho;
                     mixture[i][j][k].u = rhou / rho;
@@ -406,10 +418,10 @@ void LBM::calculate_moment_point(int i, int j, int k)
             rhov_a[a] += species[a][i][j][k].f[l]*cy[l];
             rhow_a[a] += species[a][i][j][k].f[l]*cz[l];
 
-            double velocity_set[3] = {cx[l], cy[l], cz[l]};
+            double velocity_set[3] = {(double)cx[l], (double)cy[l], (double)cz[l]};
 
-            for(int p=0; p < 3; ++p)
-                for(int q=0; q < 3; ++q)
+            for(int p=0; p < 3; ++p)   // tensor is symmetric: accumulate the upper triangle only
+                for(int q=p; q < 3; ++q)
                     mixture[i][j][k].p_tensor[p][q] += species[a][i][j][k].f[l]*velocity_set[p]*velocity_set[q];
         }
         if (rho_a[a] != 0)
@@ -433,6 +445,10 @@ void LBM::calculate_moment_point(int i, int j, int k)
         rhov += rhov_a[a];
         rhow += rhow_a[a];
     }
+
+    mixture[i][j][k].p_tensor[1][0] = mixture[i][j][k].p_tensor[0][1];
+    mixture[i][j][k].p_tensor[2][0] = mixture[i][j][k].p_tensor[0][2];
+    mixture[i][j][k].p_tensor[2][1] = mixture[i][j][k].p_tensor[1][2];
 
     mixture[i][j][k].rho = rho;
     mixture[i][j][k].u = rhou / rho;
