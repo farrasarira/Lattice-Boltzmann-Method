@@ -98,8 +98,8 @@ void LBM::Init()
                     // initiate Cantera object
                     int rank = omp_get_thread_num();
                     auto gas = sols[rank]->thermo();
-                    std::vector <double> X (gas->nSpecies());
-                    for(size_t a = 0; a < nSpecies; ++a) X[gas->speciesIndex(speciesName[a])] = species[a][i][j][k].X;
+                    std::vector <double> X (nSpeciesCantera);
+                    for(size_t a = 0; a < nSpecies; ++a) X[speciesIdx[a]] = species[a][i][j][k].X;
                     gas->setMoleFractions(&X[0]);
                     gas->setState_TP(units.si_temp(mixture[i][j][k].temp), units.si_p(mixture[i][j][k].p));
 
@@ -114,11 +114,7 @@ void LBM::Init()
                     #endif
                     double theta = units.energy_mass(gas->RT()/gas->meanMolecularWeight());
 
-                    double eq_p_tensor[3][3] = {{0., 0., 0.},    // pressure tensor
-                                                {0., 0., 0.},
-                                                {0., 0., 0.}};
-
-                    double corr[3] = {0, 0, 0}; 
+                    double corr[3] = {0, 0, 0};
 
                     // ------------- Energy Distribution Function Initialization -----------------------------
                     #ifndef ISOTHERM
@@ -131,20 +127,11 @@ void LBM::Init()
                     // Species distribution function Initialization
                     for(size_t a = 0; a < nSpecies; ++a)
                     {
-                        species[a][i][j][k].rho = std::max( gas->massFraction(gas->speciesIndex(speciesName[a])) * mixture[i][j][k].rho, SPECIES_MIN);
+                        species[a][i][j][k].rho = std::max( gas->massFraction(speciesIdx[a]) * mixture[i][j][k].rho, SPECIES_MIN);
                         species[a][i][j][k].u = mixture[i][j][k].u;
                         species[a][i][j][k].v = mixture[i][j][k].v;
                         species[a][i][j][k].w = mixture[i][j][k].w;
-                        theta = units.energy_mass(gas->RT() / gas->molecularWeight(gas->speciesIndex(speciesName[a])) );
-
-                        for(int p=0; p < 3; ++p)
-                        {
-                            for(int q=0; q < 3; ++q)
-                            {
-                                eq_p_tensor[p][q] = (p==q) ? species[a][i][j][k].X*mixture[i][j][k].p+species[a][i][j][k].rho*velocity[p]*velocity[q] : species[a][i][j][k].rho*velocity[p]*velocity[q]; 
-                                species[a][i][j][k].p_tensor[p][q] = eq_p_tensor[p][q]; 
-                            }  
-                        }
+                        theta = units.energy_mass(gas->RT() / molarMass[a] );
 
                         for (int l = 0; l < npop; ++l)
                             species[a][i][j][k].f[l]=calculate_feq(l, species[a][i][j][k].rho, velocity, theta, corr);
