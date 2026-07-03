@@ -3,6 +3,8 @@
 
 #include "lbm.hpp"
 
+#ifdef MULTICOMP
+
 void impose_NSCBC(LBM& lb, int i, int j, int k, int l_interface, double &rho_out, double rhoa_out[], double vel_out[], double &T_out );
 void normal_derivative(LBM& lb, int i, int j, int k, int idir, int isign, double delta, double &dp, double &du, double &dv, double &dw, double &drho, double *dY, size_t nSpecies);
 void tangential_derivative(LBM& lb, int i, int j, int k, int idir, double delta, double &dp, double &du, double &dv, double &dw, double &drho, double *dY, size_t nSpecies);
@@ -20,4 +22,5 @@ void update_bc_cells(LBM& lb,
     double L1, double L2, double L3, double L4, double L5, double L6[],
     double &rho_out, double rhoa_out[], double vel_out[], double &T_out);
 
+#endif
 #endif
