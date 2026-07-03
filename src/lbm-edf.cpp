@@ -170,21 +170,25 @@ void LBM::calculate_feq_geq(double fa_tgt[][npop], double g_tgt[], double rho_bb
 
     int rank = omp_get_thread_num();
     auto gas = sols[rank]->thermo();
-    std::vector <double> Y (gas->nSpecies());
+    std::vector <double> Y (nSpeciesCantera);
     for(size_t a = 0; a < nSpecies; ++a)
-        Y[gas->speciesIndex(speciesName[a])] = rhoa_bb[a] / rho_bb;
-    
+        Y[speciesIdx[a]] = rhoa_bb[a] / rho_bb;
+
     gas->setMassFractions(&Y[0]);
     gas->setState_TD(units.si_temp(temp_tgt), units.si_rho(rho_bb));
 
     double internal_energy = units.energy_mass(gas->intEnergy_mass());
-    double theta = units.energy_mass(gas->RT()/gas->meanMolecularWeight());      
-    
+    double theta = units.energy_mass(gas->RT()/gas->meanMolecularWeight());
+
+    // per-species theta does not depend on the lattice direction, so compute it once
+    double theta_a[nSpecies];
+    for (size_t a = 0; a < nSpecies; ++a)
+        theta_a[a] = units.energy_mass(gas->RT()/molarMass[a]);
+
     double corr[3]= {0, 0, 0};
-    for (int l=0; l < npop; ++l){   
+    for (int l=0; l < npop; ++l){
         for (size_t a = 0; a < nSpecies; ++a){
-            double theta_a = units.energy_mass(gas->RT()/gas->molecularWeight(gas->speciesIndex(speciesName[a]))); 
-            fa_tgt[a][l] = calculate_feq(l, rhoa_bb[a], vela_tgt[a], theta_a, corr);
+            fa_tgt[a][l] = calculate_feq(l, rhoa_bb[a], vela_tgt[a], theta_a[a], corr);
         }
 
         g_tgt[l] = calculate_geq(l, rho_bb, internal_energy, theta, vel_tgt);

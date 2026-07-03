@@ -4,7 +4,7 @@
 #include "units.hpp"
 #include "impose_nscbc.hpp"
 
-void impose_NSCBC(LBM lb, int i, int j, int k, int l_interface, double &rho_out, double rhoa_out[], double vel_out[], double &T_out )
+void impose_NSCBC(LBM& lb, int i, int j, int k, int l_interface, double &rho_out, double rhoa_out[], double vel_out[], double &T_out )
 {
 #if defined MULTICOMP
     size_t nSpecies = lb.get_nSpecies();
@@ -47,7 +47,7 @@ void impose_NSCBC(LBM lb, int i, int j, int k, int l_interface, double &rho_out,
 }
 
 
-void normal_derivative(LBM lb, int i, int j, int k, int idir, int isign, double delta, double &dp, double &du, double &dv, double &dw, double &drho, double *dY, size_t nSpecies)
+void normal_derivative(LBM& lb, int i, int j, int k, int idir, int isign, double delta, double &dp, double &du, double &dv, double &dw, double &drho, double *dY, size_t nSpecies)
 {
     if (idir == 1){
         if (isign == 1){
@@ -112,7 +112,7 @@ void normal_derivative(LBM lb, int i, int j, int k, int idir, int isign, double 
 
 }
 
-void tangential_derivative(LBM lb, int i, int j, int k, int idir, double delta, double &dp, double &du, double &dv, double &dw, double &drho, double *dY, size_t nSpecies)
+void tangential_derivative(LBM& lb, int i, int j, int k, int idir, double delta, double &dp, double &du, double &dv, double &dw, double &drho, double *dY, size_t nSpecies)
 {
     if (idir == 1){
         if (lb.mixture[i-1][j][k].type != TYPE_F){
@@ -204,18 +204,18 @@ void tangential_derivative(LBM lb, int i, int j, int k, int idir, double delta, 
 
 }
 
-void compute_tranverse_terms(LBM lb, int i, int j, int k, int idir, double& T1, double& T2, double& T3, double& T4, double& T5,
+void compute_tranverse_terms(LBM& lb, int i, int j, int k, int idir, double& T1, double& T2, double& T3, double& T4, double& T5,
 double dpdx, double dudx, double dvdx, double dwdx, double drhodx,
     double dpdy, double dudy, double dvdy, double dwdy, double drhody,
     double dpdz, double dudz, double dvdz, double dwdz, double drhodz)
 {
     size_t nSpecies = lb.get_nSpecies();
-    std::vector<std::string> speciesName = lb.get_speciesName();
+    const std::vector<size_t>& speciesIdx = lb.get_speciesIdx();
 
     int rank = omp_get_thread_num();
     auto gas = sols[rank]->thermo();   
-    std::vector <double> Y (gas->nSpecies());
-    for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = lb.species[a][i][j][k].rho / lb.mixture[i][j][k].rho;
+    std::vector <double> Y (lb.get_nSpeciesCantera());
+    for(size_t a = 0; a < nSpecies; ++a) Y[speciesIdx[a]] = lb.species[a][i][j][k].rho / lb.mixture[i][j][k].rho;
     gas->setMassFractions(&Y[0]);
     gas->setState_DP(units.si_rho(lb.mixture[i][j][k].rho), units.si_p(lb.mixture[i][j][k].p));
 
@@ -277,7 +277,7 @@ double dpdx, double dudx, double dvdx, double dwdx, double drhodx,
     }
 }
 
-void compute_waves(LBM lb,
+void compute_waves(LBM& lb,
     int i, int j, int k, int idir, int isign,
     double T1, double T2, double T3, double T4, double T5,
     double& L1, double& L2, double& L3, double& L4, double& L5, double *L6,
@@ -293,12 +293,12 @@ void compute_waves(LBM lb,
     }
 
     size_t nSpecies = lb.get_nSpecies();
-    std::vector<std::string> speciesName = lb.get_speciesName();
+    const std::vector<size_t>& speciesIdx = lb.get_speciesIdx();
 
     int rank = omp_get_thread_num();
     auto gas = sols[rank]->thermo();   
-    std::vector <double> Y (gas->nSpecies());
-    for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = lb.species[a][i][j][k].rho / lb.mixture[i][j][k].rho;
+    std::vector <double> Y (lb.get_nSpeciesCantera());
+    for(size_t a = 0; a < nSpecies; ++a) Y[speciesIdx[a]] = lb.species[a][i][j][k].rho / lb.mixture[i][j][k].rho;
     gas->setMassFractions(&Y[0]);
     gas->setState_DP(units.si_rho(lb.mixture[i][j][k].rho), units.si_p(lb.mixture[i][j][k].p));
 
@@ -423,7 +423,7 @@ void compute_waves(LBM lb,
     // }
 }
 
-void update_bc_cells(LBM lb,
+void update_bc_cells(LBM& lb,
     int i, int j, int k, int idir, int isign,
     double L1, double L2, double L3, double L4, double L5, double L6[],
     double &rho_out, double rhoa_out[], double vel_out[], double &T_out)
@@ -438,12 +438,12 @@ void update_bc_cells(LBM lb,
     }
 
     size_t nSpecies = lb.get_nSpecies();
-    std::vector<std::string> speciesName = lb.get_speciesName();
+    const std::vector<size_t>& speciesIdx = lb.get_speciesIdx();
 
     int rank = omp_get_thread_num();
     auto gas = sols[rank]->thermo();   
-    std::vector <double> Y (gas->nSpecies());
-    for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = lb.species[a][i][j][k].rho / lb.mixture[i][j][k].rho;
+    std::vector <double> Y (lb.get_nSpeciesCantera());
+    for(size_t a = 0; a < nSpecies; ++a) Y[speciesIdx[a]] = lb.species[a][i][j][k].rho / lb.mixture[i][j][k].rho;
     gas->setMassFractions(&Y[0]);
     gas->setState_DP(units.si_rho(lb.mixture[i][j][k].rho), units.si_p(lb.mixture[i][j][k].p));
 
@@ -483,7 +483,7 @@ void update_bc_cells(LBM lb,
         rhoa_out[a] = (lb.species[a][i][j][k].rho/lb.mixture[i][j][k].rho - dt_sim*L6[a]) * rho_out ;
     
     std::fill(Y.begin(), Y.end(), 0.0);
-    for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = rhoa_out[a] / rho_out;
+    for(size_t a = 0; a < nSpecies; ++a) Y[speciesIdx[a]] = rhoa_out[a] / rho_out;
     gas->setMassFractions(&Y[0]);
     gas->setState_DP(units.si_rho(rho_out), units.si_p(p_out));
 

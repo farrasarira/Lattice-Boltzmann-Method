@@ -64,7 +64,7 @@
                                         {0., 0., 0.},
                                         {0., 0., 0.}}; 
 
-            double rho;              // macroscopic quantity
+            double rho = 1.0;        // macroscopic quantity (initialized so never-written boundary cells hold a defined value)
             double u = 0.0;          // velocity in x-direction
             double v = 0.0;          // velocity in y-direction
             double w = 0.0;          // velocity in z-direction
@@ -91,14 +91,10 @@
             double X = 0.0;             // mole fraction
             double rho = 0.0;           // density
 
-            double f[npop], fpc[npop];  // distribution function, distribution function post collistion  
+            double f[npop], fpc[npop];  // distribution function, distribution function post collistion
             double u = 0.0;     // velocity in x-direction
             double v = 0.0;     // velocity in y-direction
             double w = 0.0;     // velocity in z-direction
-
-            double p_tensor[3][3] = {{0., 0., 0.},    // pressure tensor
-                                     {0., 0., 0.},
-                                     {0., 0., 0.}};
 
     };
 
@@ -124,8 +120,19 @@
             size_t nSpecies = 0;
             std::vector<std::string> speciesName;
             double permeability = 999999;  // Permeability
+
+            // precomputed once in the constructor to avoid per-cell Cantera lookups
+            size_t nSpeciesCantera = 0;         // number of species in the full mechanism
+            std::vector<size_t> speciesIdx;     // Cantera index of each simulated species
+            std::vector<double> molarMass;      // molecular weight of each simulated species [kg/kmol]
             #endif
-        
+
+            // contiguous storage backing the mixture/species pointer tables
+            MIXTURE * mixture_data = nullptr;
+            #ifdef MULTICOMP
+                std::vector<SPECIES*> species_data;
+            #endif
+
         public:
             MIXTURE *** mixture;
             #ifdef MULTICOMP
@@ -219,6 +226,9 @@
                 int get_nSpecies(){return nSpecies;};
                 std::vector<std::string> get_speciesName(){return speciesName;};
                 double get_permeability(){return permeability;};
+                size_t get_nSpeciesCantera(){return nSpeciesCantera;};
+                const std::vector<size_t>& get_speciesIdx(){return speciesIdx;};
+                const std::vector<double>& get_molarMass(){return molarMass;};
                 size_t get_size(){
                     size_t size_scalar_int      = 9 * sizeof(int);
                     size_t size_scalar_species  = sizeof(size_t) + nSpecies*sizeof(size_t);
