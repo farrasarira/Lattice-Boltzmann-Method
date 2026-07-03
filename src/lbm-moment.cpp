@@ -2,16 +2,16 @@
 #include "math_util.hpp"
 #include "units.hpp"
 #include "omp.h"
+#ifdef MULTICOMP
+#include <Eigen/Dense>
+#endif
 
 
 #ifndef MULTICOMP
 void LBM::calculate_moment()
 {
-    std::vector<std::vector<std::vector<double>>> dQdevx(Nx, std::vector<std::vector<double>>(Ny, std::vector<double>(Nz)));
-    std::vector<std::vector<std::vector<double>>> dQdevy(Nx, std::vector<std::vector<double>>(Ny, std::vector<double>(Nz)));
-    std::vector<std::vector<std::vector<double>>> dQdevz(Nx, std::vector<std::vector<double>>(Ny, std::vector<double>(Nz)));
-    #ifdef PARALLEL 
-    #pragma omp parallel for schedule(dynamic) 
+    #ifdef PARALLEL
+    #pragma omp parallel for schedule(dynamic)
     #endif
     for (int i = 0; i < Nx; ++i){
         for (int j = 0; j < Ny; ++j){
@@ -184,19 +184,32 @@ void LBM::calculate_moment_point(int i, int j, int k)
 #elif defined MULTICOMP
 void LBM::calculate_moment()
 {
-    #ifdef PARALLEL 
-    #pragma omp parallel for schedule(dynamic) 
+    #ifdef PARALLEL
+    #pragma omp parallel
+    #endif
+    {
+    // thread-local Cantera objects and work buffers, reused for every cell
+    int rank = omp_get_thread_num();
+    auto gas = sols[rank]->thermo();
+    auto trans = sols[rank]->transport();
+    const int ld = nSpeciesCantera;
+    std::vector<double> Y (nSpeciesCantera);
+    std::vector<double> X (nSpeciesCantera);
+    std::vector<double> d (ld * ld);
+    Eigen::MatrixXd matrix_A(nSpecies, nSpecies);
+    Eigen::VectorXd vector_rx(nSpecies);
+    Eigen::VectorXd vector_ry(nSpecies);
+    Eigen::VectorXd vector_rz(nSpecies);
+
+    #ifdef PARALLEL
+    #pragma omp for collapse(2) schedule(dynamic)
     #endif
     for (int i = 0; i < Nx; ++i){
         for (int j = 0; j < Ny; ++j){
             for (int k = 0; k < Nz; ++k){
                 if (mixture[i][j][k].type==TYPE_F){
-                    // create Cantera Object
-                    int rank = omp_get_thread_num();
-                    auto gas = sols[rank]->thermo();
-                    std::vector<double> Y (gas->nSpecies());
-                    std::vector<double> X (gas->nSpecies());
-                    for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = species[a][i][j][k].rho / mixture[i][j][k].rho;
+                    std::fill(Y.begin(), Y.end(), 0.0);
+                    for(size_t a = 0; a < nSpecies; ++a) Y[speciesIdx[a]] = species[a][i][j][k].rho / mixture[i][j][k].rho;
                     gas->setMassFractions(&Y[0]);
                     gas->setState_TD(units.si_temp(mixture[i][j][k].temp), units.si_rho(mixture[i][j][k].rho));
 
@@ -233,26 +246,18 @@ void LBM::calculate_moment()
                     double rhov_a[nSpecies] = {0.0};
                     double rhow_a[nSpecies] = {0.0};
 
-                    for(size_t a = 0; a < nSpecies; ++a){           
-                        for(int p=0; p < 3; ++p)
-                            for(int q=0; q < 3; ++q)
-                                species[a][i][j][k].p_tensor[p][q] = 0.0;
-
+                    for(size_t a = 0; a < nSpecies; ++a){
                         for (int l = 0; l < npop; ++l){
                             rho_a[a]  += species[a][i][j][k].f[l];
                             rhou_a[a] += species[a][i][j][k].f[l]*cx[l];
                             rhov_a[a] += species[a][i][j][k].f[l]*cy[l];
                             rhow_a[a] += species[a][i][j][k].f[l]*cz[l];
 
-                            // std::cout << a  << " | " << species[a][i][j][k].f[l] << std::endl;
-
                             double velocity_set[3] = {cx[l], cy[l], cz[l]};
 
                             for(int p=0; p < 3; ++p)
-                                for(int q=0; q < 3; ++q){
-                                    species[a][i][j][k].p_tensor[p][q] += species[a][i][j][k].f[l]*velocity_set[p]*velocity_set[q];
+                                for(int q=0; q < 3; ++q)
                                     mixture[i][j][k].p_tensor[p][q] += species[a][i][j][k].f[l]*velocity_set[p]*velocity_set[q];
-                                }
                         }
                         if (rho_a[a] > SPECIES_MIN)
                         {
@@ -282,37 +287,28 @@ void LBM::calculate_moment()
                     mixture[i][j][k].w = rhow / rho;
                                         
                     // -------------------------------------------------------------------------------------------------------------------------------
-                    int ld = gas->nSpecies();
-                    std::vector<double> d(ld * ld);
-                    auto trans=sols[rank]->transport();
                     trans->getBinaryDiffCoeffs(ld, &d[0]);
 
                     double D_ab[nSpecies][nSpecies];
-                    for(size_t a = 0; a < nSpecies; ++a)                      
+                    for(size_t a = 0; a < nSpecies; ++a)
                         for(size_t b = 0; b <= a; ++b){
-                            D_ab[a][b] =  units.nu( d[ld*gas->speciesIndex(speciesName[b]) + gas->speciesIndex(speciesName[a])] );
+                            D_ab[a][b] =  units.nu( d[ld*speciesIdx[b] + speciesIdx[a]] );
                             D_ab[b][a] = D_ab[a][b];
                         }
 
-                    Eigen::SparseMatrix<double> matrix_A(nSpecies, nSpecies);
-                    Eigen::VectorXd vector_rx(nSpecies);
-                    Eigen::VectorXd vector_ry(nSpecies);
-                    Eigen::VectorXd vector_rz(nSpecies);
-                    Eigen::VectorXd vector_u(nSpecies);
-                    Eigen::VectorXd vector_v(nSpecies);
-                    Eigen::VectorXd vector_w(nSpecies); 
-
+                    // dense symmetric system (the matrix is fully populated anyway,
+                    // so a dense Cholesky factorization is much faster than a per-cell sparse solver)
                     for(size_t a = 0; a < nSpecies; ++a)
                         for(size_t b = 0; b < nSpecies; ++b)
-                            if(b != a) matrix_A.insert(a, b) = -1.0 * dt_sim/2.0 * mixture[i][j][k].p * species[a][i][j][k].X*species[b][i][j][k].X/D_ab[a][b];
+                            if(b != a) matrix_A(a, b) = -1.0 * dt_sim/2.0 * mixture[i][j][k].p * species[a][i][j][k].X*species[b][i][j][k].X/D_ab[a][b];
                             else {
-                                if(species[a][i][j][k].rho == 0.0) matrix_A.insert(a, b) = 1.0;
-                                else matrix_A.insert(a, b) = species[a][i][j][k].rho;
+                                if(species[a][i][j][k].rho == 0.0) matrix_A(a, b) = 1.0;
+                                else matrix_A(a, b) = species[a][i][j][k].rho;
                             }
 
                     for(size_t a = 0; a < nSpecies; ++a)
                         for(size_t b = 0; b < nSpecies; ++b)
-                            if (b != a) matrix_A.coeffRef(a, a) -= matrix_A.coeffRef(a,b);
+                            if (b != a) matrix_A(a, a) -= matrix_A(a,b);
 
                     for(size_t a = 0; a < nSpecies; ++a){
                         vector_rx(a) = rhou_a[a];
@@ -320,15 +316,11 @@ void LBM::calculate_moment()
                         vector_rz(a) = rhow_a[a];
                     }
 
-                    // Eigen::SparseLU<Eigen::SparseMatrix<double> , Eigen::COLAMDOrdering<int> > solver;
-                    Eigen::SimplicialLLT<Eigen::SparseMatrix<double> > solver;
-                    // solver.analyzePattern(matrix_A);
-                    // solver.factorize(matrix_A);                
-                    solver.compute(matrix_A);
+                    Eigen::LLT<Eigen::MatrixXd> solver(matrix_A);
 
-                    vector_u = solver.solve(vector_rx);
-                    vector_v = solver.solve(vector_ry);
-                    vector_w = solver.solve(vector_rz);
+                    Eigen::VectorXd vector_u = solver.solve(vector_rx);
+                    Eigen::VectorXd vector_v = solver.solve(vector_ry);
+                    Eigen::VectorXd vector_w = solver.solve(vector_rz);
 
                     for(size_t a = 0; a < nSpecies; ++a){
                         species[a][i][j][k].u = vector_u(a);
@@ -340,7 +332,7 @@ void LBM::calculate_moment()
 
 
                     std::fill(Y.begin(), Y.end(), 0.0);
-                    for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = species[a][i][j][k].rho / mixture[i][j][k].rho;
+                    for(size_t a = 0; a < nSpecies; ++a) Y[speciesIdx[a]] = species[a][i][j][k].rho / mixture[i][j][k].rho;
                     gas->setMassFractions(&Y[0]);
 
                     #ifndef ISOTHERM
@@ -358,15 +350,16 @@ void LBM::calculate_moment()
                     #endif
                     
                     gas->getMoleFractions(&X[0]);
-                    for(size_t a = 0; a < nSpecies; ++a) species[a][i][j][k].X = X[gas->speciesIndex(speciesName[a])];
-            
-                    mixture[i][j][k].temp = units.temp(gas->temperature()); 
-                    mixture[i][j][k].p = units.p(gas->pressure()); 
+                    for(size_t a = 0; a < nSpecies; ++a) species[a][i][j][k].X = X[speciesIdx[a]];
+
+                    mixture[i][j][k].temp = units.temp(gas->temperature());
+                    mixture[i][j][k].p = units.p(gas->pressure());
 
                 }
             }
         }
     }
+    } // end parallel region
 
     // fill_BC();
 }
@@ -406,26 +399,18 @@ void LBM::calculate_moment_point(int i, int j, int k)
     double rhov_a[nSpecies] = {0.0};
     double rhow_a[nSpecies] = {0.0};
 
-    for(size_t a = 0; a < nSpecies; ++a){           
-        for(int p=0; p < 3; ++p)
-            for(int q=0; q < 3; ++q)
-                species[a][i][j][k].p_tensor[p][q] = 0.0;
-
+    for(size_t a = 0; a < nSpecies; ++a){
         for (int l = 0; l < npop; ++l){
             rho_a[a]  += species[a][i][j][k].f[l];
             rhou_a[a] += species[a][i][j][k].f[l]*cx[l];
             rhov_a[a] += species[a][i][j][k].f[l]*cy[l];
             rhow_a[a] += species[a][i][j][k].f[l]*cz[l];
 
-            // std::cout << a  << " | " << species[a][i][j][k].f[l] << std::endl;
-
             double velocity_set[3] = {cx[l], cy[l], cz[l]};
 
             for(int p=0; p < 3; ++p)
-                for(int q=0; q < 3; ++q){
-                    species[a][i][j][k].p_tensor[p][q] += species[a][i][j][k].f[l]*velocity_set[p]*velocity_set[q];
+                for(int q=0; q < 3; ++q)
                     mixture[i][j][k].p_tensor[p][q] += species[a][i][j][k].f[l]*velocity_set[p]*velocity_set[q];
-                }
         }
         if (rho_a[a] != 0)
         {
@@ -457,42 +442,39 @@ void LBM::calculate_moment_point(int i, int j, int k)
     // create Cantera Object
     int rank = omp_get_thread_num();
     auto gas = sols[rank]->thermo();
-    std::vector<double> Y (gas->nSpecies());
-    std::vector<double> X (gas->nSpecies());
-    for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = species[a][i][j][k].rho / mixture[i][j][k].rho;
+    std::vector<double> Y (nSpeciesCantera);
+    std::vector<double> X (nSpeciesCantera);
+    for(size_t a = 0; a < nSpecies; ++a) Y[speciesIdx[a]] = species[a][i][j][k].rho / mixture[i][j][k].rho;
     gas->setMassFractions(&Y[0]);
     gas->setState_TD(units.si_temp(mixture[i][j][k].temp), units.si_rho(mixture[i][j][k].rho));
-                        
+
     // -------------------------------------------------------------------------------------------------------------------------------
-    int ld = gas->nSpecies();
+    const int ld = nSpeciesCantera;
     std::vector<double> d(ld * ld);
     auto trans=sols[rank]->transport();
     trans->getBinaryDiffCoeffs(ld, &d[0]);
 
     double D_ab[nSpecies][nSpecies];
-    for(size_t a = 0; a < nSpecies; ++a)                      
+    for(size_t a = 0; a < nSpecies; ++a)
         for(size_t b = 0; b < nSpecies; ++b)
-            D_ab[a][b] =  units.nu( d[ld*gas->speciesIndex(speciesName[b]) + gas->speciesIndex(speciesName[a])] );
+            D_ab[a][b] =  units.nu( d[ld*speciesIdx[b] + speciesIdx[a]] );
 
-    Eigen::SparseMatrix<double> matrix_A(nSpecies, nSpecies);
+    Eigen::MatrixXd matrix_A(nSpecies, nSpecies);
     Eigen::VectorXd vector_rx(nSpecies);
     Eigen::VectorXd vector_ry(nSpecies);
     Eigen::VectorXd vector_rz(nSpecies);
-    Eigen::VectorXd vector_u(nSpecies);
-    Eigen::VectorXd vector_v(nSpecies);
-    Eigen::VectorXd vector_w(nSpecies); 
 
     for(size_t a = 0; a < nSpecies; ++a)
         for(size_t b = 0; b < nSpecies; ++b)
-            if(b != a) matrix_A.insert(a, b) = -1.0 * dt_sim/2.0 * mixture[i][j][k].p * species[a][i][j][k].X*species[b][i][j][k].X/D_ab[a][b];
+            if(b != a) matrix_A(a, b) = -1.0 * dt_sim/2.0 * mixture[i][j][k].p * species[a][i][j][k].X*species[b][i][j][k].X/D_ab[a][b];
             else {
-                if(species[a][i][j][k].rho == 0.0) matrix_A.insert(a, b) = 1.0;
-                else matrix_A.insert(a, b) = species[a][i][j][k].rho;
+                if(species[a][i][j][k].rho == 0.0) matrix_A(a, b) = 1.0;
+                else matrix_A(a, b) = species[a][i][j][k].rho;
             }
 
     for(size_t a = 0; a < nSpecies; ++a)
         for(size_t b = 0; b < nSpecies; ++b)
-            if (b != a) matrix_A.coeffRef(a, a) -= matrix_A.coeffRef(a,b);
+            if (b != a) matrix_A(a, a) -= matrix_A(a,b);
 
     for(size_t a = 0; a < nSpecies; ++a){
         vector_rx(a) = rhou_a[a];
@@ -500,15 +482,11 @@ void LBM::calculate_moment_point(int i, int j, int k)
         vector_rz(a) = rhow_a[a];
     }
 
-    // Eigen::SparseLU<Eigen::SparseMatrix<double> , Eigen::COLAMDOrdering<int> > solver;
-    Eigen::SparseLU<Eigen::SparseMatrix<double> > solver;
-    solver.analyzePattern(matrix_A);
-    solver.factorize(matrix_A);                
-    solver.compute(matrix_A);
+    Eigen::PartialPivLU<Eigen::MatrixXd> solver(matrix_A);
 
-    vector_u = solver.solve(vector_rx);
-    vector_v = solver.solve(vector_ry);
-    vector_w = solver.solve(vector_rz);
+    Eigen::VectorXd vector_u = solver.solve(vector_rx);
+    Eigen::VectorXd vector_v = solver.solve(vector_ry);
+    Eigen::VectorXd vector_w = solver.solve(vector_rz);
 
     for(size_t a = 0; a < nSpecies; ++a){
         species[a][i][j][k].u = vector_u(a);
@@ -519,7 +497,7 @@ void LBM::calculate_moment_point(int i, int j, int k)
     // ------------------------------------------------------------------------------------------
 
     std::fill(Y.begin(), Y.end(), 0.0);
-    for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = species[a][i][j][k].rho / mixture[i][j][k].rho;
+    for(size_t a = 0; a < nSpecies; ++a) Y[speciesIdx[a]] = species[a][i][j][k].rho / mixture[i][j][k].rho;
     gas->setMassFractions(&Y[0]);
 
     #ifndef ISOTHERM
@@ -534,10 +512,10 @@ void LBM::calculate_moment_point(int i, int j, int k)
     #endif
     
     gas->getMoleFractions(&X[0]);
-    for(size_t a = 0; a < nSpecies; ++a) species[a][i][j][k].X = X[gas->speciesIndex(speciesName[a])];
+    for(size_t a = 0; a < nSpecies; ++a) species[a][i][j][k].X = X[speciesIdx[a]];
 
-    mixture[i][j][k].temp = units.temp(gas->temperature()); 
-    mixture[i][j][k].p = units.p(gas->pressure()); 
+    mixture[i][j][k].temp = units.temp(gas->temperature());
+    mixture[i][j][k].p = units.p(gas->pressure());
     // gas_const = units.cp(Cantera::GasConstant/gas->meanMolecularWeight());
 
 }
@@ -547,10 +525,10 @@ double LBM::calculate_temp(double U, double rho, double rho_a[])
 {
     int rank = omp_get_thread_num();
     auto gas = sols[rank]->thermo();
-    std::vector <double> Y (gas->nSpecies());
+    std::vector <double> Y (nSpeciesCantera);
 
     for(size_t a = 0; a < nSpecies; ++a){
-        Y[gas->speciesIndex(speciesName[a])] = rho_a[a] / rho;
+        Y[speciesIdx[a]] = rho_a[a] / rho;
     }
     gas->setMassFractions(&Y[0]);
     gas->setState_UV(units.si_energy_mass(U), 1.0/units.si_rho(rho));
