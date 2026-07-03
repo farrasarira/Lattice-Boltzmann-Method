@@ -4,6 +4,10 @@
 #include "units.hpp"
 #include "impose_nscbc.hpp"
 
+// NSCBC is only used by the multicomponent TMS_BC path; guard it so that
+// single-component (non-MULTICOMP) cases build again
+#ifdef MULTICOMP
+
 void impose_NSCBC(LBM& lb, int i, int j, int k, int l_interface, double &rho_out, double rhoa_out[], double vel_out[], double &T_out )
 {
 #if defined MULTICOMP
@@ -491,3 +495,4 @@ void update_bc_cells(LBM& lb,
 
 
 }
+#endif // MULTICOMP

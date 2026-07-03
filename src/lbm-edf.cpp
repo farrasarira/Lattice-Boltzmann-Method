@@ -101,7 +101,7 @@ double LBM::calculate_geq(int l, double rhoe, double eq_heat_flux[], double eq_R
 {
     double geq = rhoe;
     
-    double velocity_set[3] = {cx[l], cy[l], cz[l]};
+    double velocity_set[3] = {(double)cx[l], (double)cy[l], (double)cz[l]};
     geq += dotproduct_Vec3(eq_heat_flux, velocity_set) / theta;
 
     double matA[3][3] = {{eq_R_tensor[0][0]-rhoe*theta, eq_R_tensor[0][1]           , eq_R_tensor[0][2]},
@@ -139,7 +139,7 @@ double LBM::calculate_geq(int l, double rhoe, double eq_heat_flux[], double eq_R
 
 double LBM::calculate_gstr(int l, double geq, double d_str_heat_flux[])
 {
-    double velocity_set[3] = {cx[l], cy[l], cz[l]};
+    double velocity_set[3] = {(double)cx[l], (double)cy[l], (double)cz[l]};
     double gstr = 0.0;
     if(v_sqr(velocity_set[0], velocity_set[1], velocity_set[2]) == 1.0)
         gstr = geq + 0.5*dotproduct_Vec3(velocity_set, d_str_heat_flux);

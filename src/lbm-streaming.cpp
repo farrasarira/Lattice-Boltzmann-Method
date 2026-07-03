@@ -2,8 +2,9 @@
 
 void LBM::Streaming()
 {
-    #ifdef PARALLEL 
-        #pragma omp parallel for schedule(dynamic) 
+    #ifdef PARALLEL
+        // uniform work per cell: static scheduling avoids dynamic-dispatch overhead
+        #pragma omp parallel for collapse(2) schedule(static)
     #endif
     for(int i=0; i<Nx; ++i)
     {
@@ -97,9 +98,11 @@ void LBM::Streaming()
 
 
                             
-                            i_nb = ((i_nb - 1 + (Nx-2)) % (Nx-2)) + 1;
-                            j_nb = ((j_nb - 1 + (Ny-2)) % (Ny-2)) + 1;
-                            k_nb = ((k_nb - 1 + (Nz-2)) % (Nz-2)) + 1;
+                            // periodic wrap: i_nb is always within [0, Nx-1] here, so two
+                            // compares replace the integer modulo (much cheaper per pop)
+                            if (i_nb == 0) i_nb = Nx-2; else if (i_nb == Nx-1) i_nb = 1;
+                            if (j_nb == 0) j_nb = Ny-2; else if (j_nb == Ny-1) j_nb = 1;
+                            if (k_nb == 0) k_nb = Nz-2; else if (k_nb == Nz-1) k_nb = 1;
                             
                             #ifndef MULTICOMP
                             mixture[i][j][k].f[l] = mixture[i_nb][j_nb][k_nb].fpc[l];
@@ -147,9 +150,11 @@ void LBM::Streaming()
 
 
                             
-                            i_nb = ((i_nb - 1 + (Nx-2)) % (Nx-2)) + 1;
-                            j_nb = ((j_nb - 1 + (Ny-2)) % (Ny-2)) + 1;
-                            k_nb = ((k_nb - 1 + (Nz-2)) % (Nz-2)) + 1;
+                            // periodic wrap: i_nb is always within [0, Nx-1] here, so two
+                            // compares replace the integer modulo (much cheaper per pop)
+                            if (i_nb == 0) i_nb = Nx-2; else if (i_nb == Nx-1) i_nb = 1;
+                            if (j_nb == 0) j_nb = Ny-2; else if (j_nb == Ny-1) j_nb = 1;
+                            if (k_nb == 0) k_nb = Nz-2; else if (k_nb == Nz-1) k_nb = 1;
 
                             #ifndef ISOTHERM
                             mixture[i][j][k].g[l] = mixture[i_nb][j_nb][k_nb].gpc[l];          
