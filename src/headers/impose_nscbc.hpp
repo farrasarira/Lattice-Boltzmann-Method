@@ -1,5 +1,5 @@
 #ifndef IMPOSE_NSCBC
-#define IMPOASE_NSCBC
+#define IMPOSE_NSCBC
 
 #include "lbm.hpp"
 
@@ -16,11 +16,12 @@ void compute_waves(LBM& lb,
     int i, int j, int k, int idir, int isign,
     double T1, double T2, double T3, double T4, double T5,
     double& L1, double& L2, double& L3, double& L4, double& L5, double *L6,
-    double dp, double du, double dv, double dw, double drho, double dYdx[], double dYdy[], double dYdz[]);
+    double dp, double du, double dv, double dw, double drho, double dYn[]);
 void update_bc_cells(LBM& lb,
     int i, int j, int k, int idir, int isign,
     double L1, double L2, double L3, double L4, double L5, double L6[],
     double &rho_out, double rhoa_out[], double vel_out[], double &T_out);
 
-#endif
+#endif // MULTICOMP
+
 #endif

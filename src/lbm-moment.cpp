@@ -249,10 +249,10 @@ void LBM::calculate_moment()
                     mixture[i][j][k].energy_flux[2]=heat_flux_z;
                     #endif
 
-                    double rho_a[nSpecies] = {0.0};
-                    double rhou_a[nSpecies] = {0.0};
-                    double rhov_a[nSpecies] = {0.0};
-                    double rhow_a[nSpecies] = {0.0};
+                    double rho_a[nSpecies]; std::fill_n(&rho_a[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
+                    double rhou_a[nSpecies]; std::fill_n(&rhou_a[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
+                    double rhov_a[nSpecies]; std::fill_n(&rhov_a[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
+                    double rhow_a[nSpecies]; std::fill_n(&rhow_a[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
 
                     for(size_t a = 0; a < nSpecies; ++a){
                         for (int l = 0; l < npop; ++l){
@@ -406,10 +406,10 @@ void LBM::calculate_moment_point(int i, int j, int k)
     mixture[i][j][k].energy_flux[2]=heat_flux_z;
     #endif
 
-    double rho_a[nSpecies] = {0.0};
-    double rhou_a[nSpecies] = {0.0};
-    double rhov_a[nSpecies] = {0.0};
-    double rhow_a[nSpecies] = {0.0};
+    double rho_a[nSpecies]; std::fill_n(&rho_a[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
+    double rhou_a[nSpecies]; std::fill_n(&rhou_a[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
+    double rhov_a[nSpecies]; std::fill_n(&rhov_a[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
+    double rhow_a[nSpecies]; std::fill_n(&rhow_a[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
 
     for(size_t a = 0; a < nSpecies; ++a){
         for (int l = 0; l < npop; ++l){

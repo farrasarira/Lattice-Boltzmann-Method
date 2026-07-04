@@ -95,6 +95,21 @@
 
     #define SPECIES_MIN 1E-8
 
+    // ############# NSCBC parameters #################
+    // Characteristic boundary conditions (TYPE_O_C / TYPE_I_C), see impose_nscbc.cpp
+    #ifndef NSCBC_SIGMA_OUT
+    #define NSCBC_SIGMA_OUT 0.25    // outflow pressure relaxation (Rudy & Strikwerda; 0 = perfectly non-reflecting, pressure may drift)
+    #endif
+    #ifndef NSCBC_RELAX_U
+    #define NSCBC_RELAX_U 0.20      // inflow velocity relaxation strength
+    #endif
+    #ifndef NSCBC_RELAX_T
+    #define NSCBC_RELAX_T 0.20      // inflow temperature relaxation strength
+    #endif
+    #ifndef NSCBC_RELAX_Y
+    #define NSCBC_RELAX_Y 0.20      // inflow species relaxation strength
+    #endif
+
     // ############# Flow Parameters ##################
     // Reference Moment Value [in Lattice Unit]
     #define VEL0 0.1    // velocity    
