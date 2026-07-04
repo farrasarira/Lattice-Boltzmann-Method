@@ -3504,14 +3504,20 @@ void main_setup() // Perfectly stirred reactor ---------------------------------
 
 
 #elif defined ACCOUSTIC_WAVE_1D
-void main_setup() // Perfectly stirred reactor ------------------------------------------------------------------------------------------
+void main_setup() // 1D NSCBC validation: Gaussian pressure pulse leaving through characteristic outflows
 {
-    units.set_m_kg_s(0.5e-5, 5e-9); //6.4e-6, 6.4e-10 (0.75-1.0)
-    
-    int NX = 1040; 
-    int NY = 1; 
+    // Canonical NSCBC test (Poinsot & Lele 1992, sec. 5): a small Gaussian
+    // pressure pulse in quiescent gas splits into two acoustic waves that
+    // travel to the boundaries. With perfect boundary conditions they leave
+    // the domain without reflection; the residual pressure disturbance after
+    // the pulse has left, divided by the pulse amplitude, is the reflection
+    // coefficient of the boundary condition.
+    units.set_m_kg_s(0.5e-5, 5e-9);
+
+    int NX = 400;
+    int NY = 1;
     int NZ = 1;
-    
+
     auto sol = Cantera::newSolution("h2o2.yaml", "ohmech");
     auto gas = sol->thermo();
 
@@ -3519,31 +3525,22 @@ void main_setup() // Perfectly stirred reactor ---------------------------------
 
     LBM lb(NX, NY, NZ, species);
     int Nx = lb.get_Nx(); int Ny = lb.get_Ny(); int Nz = lb.get_Nz();
-    size_t nSpecies = lb.get_nSpecies();
-    
-    auto trans = sol->transport();
+
     std::vector <double> X (gas->nSpecies());
-    X[gas->speciesIndex("N2")] = 0.73438;
+    X[gas->speciesIndex("N2")] = 1.0;
     gas->setMoleFractions(&X[0]);
     gas->setState_TP(300, Cantera::OneAtm);
-    
+
+    auto trans = sol->transport();
     std::cout << "nu (lu) : " << units.nu(trans->viscosity() / gas->density()) << std::endl;
-    std::cout << "gas const : " << units.cp(Cantera::GasConstant/gas->meanMolecularWeight()) << std::endl;
-    std::cout << "temperature : " << units.temp(gas->temperature()) << std::endl;
-    std::cout << "gamma : " << gas->cp_mass()/gas->cv_mass() << std::endl;
-    std::cout << "sound speed : " << units.u(gas->soundSpeed()) << " " << gas->soundSpeed() <<  std::endl;
-    std::cout << "RT : " << units.cp(Cantera::GasConstant/gas->meanMolecularWeight())*units.temp(gas->temperature()) << " " << Cantera::GasConstant/gas->meanMolecularWeight()*gas->temperature() << std::endl;
+    std::cout << "sound speed (lu) : " << units.u(gas->soundSpeed()) << " (" << gas->soundSpeed() << " m/s)" << std::endl;
 
-    double u0 = 1.0*units.u(1.0);
-    double rho0 = units.rho(gas->density());
-    double p0 = units.p(gas->pressure());
-    double c0 = units.u(gas->soundSpeed());
+    double p0 = units.p(Cantera::OneAtm);
+    double T0 = units.temp(300.0);
 
-    double A = 1.0*units.u(0.8);
-    double B = 5;
-    double L = Nx;    
+    double amplitude = 0.01;        // pulse amplitude, fraction of p0
+    double width = 12.0;            // Gaussian half-width in lattice nodes
 
-    
     #pragma omp parallel for schedule(dynamic)
     for(int i = 0; i < Nx ; ++i)
     {
@@ -3551,59 +3548,40 @@ void main_setup() // Perfectly stirred reactor ---------------------------------
         {
             for(int k = 0; k < Nz; ++k)
             {
-                if ( k==0 || k==Nz-1) // set periodic boundary condition
-                {
+                if ( k==0 || k==Nz-1) // periodic in the unused directions
                     lb.mixture[i][j][k].type = TYPE_P;
-                }
-                if ( j==0 || j==Ny-1 ) // set periodic boundary condition
-                {
+                if ( j==0 || j==Ny-1 )
                     lb.mixture[i][j][k].type = TYPE_P;
-                }
-                if (i==0)
-                {
+                if (i==0 || i==Nx-1)  // characteristic outflow at both ends
                     lb.mixture[i][j][k].type = TYPE_O_C;
-                }
-                if (i==Nx-1)
+
+                if (lb.mixture[i][j][k].type == TYPE_F)
                 {
-                    lb.mixture[i][j][k].type = TYPE_O_C;
-                }
-
-                if (lb.mixture[i][j][k].type == TYPE_F ||lb.mixture[i][j][k].type == TYPE_O_C)
-                {
-                    
-                    lb.mixture[i][j][k].u = u0 + A*exp( -1.0 * sq(B * (i-L/2) / L ) );
-                    lb.mixture[i][j][k].p = p0 + rho0*c0*(lb.mixture[i][j][k].u - u0);
-                    double rho = rho0 + rho0*(lb.mixture[i][j][k].u - u0) / c0;
-                    
-                    std::vector<double> Y (gas->nSpecies());
-                    X[gas->speciesIndex("N2")] = 1.0;// for(size_t a = 0; a < nSpecies; ++a) Y[gas->speciesIndex(speciesName[a])] = species[a][i][j][k].rho / mixture[i][j][k].rho;
-                    gas->setMoleFractions(&X[0]);
-                    gas->setState_DP(units.si_rho(rho), units.si_p(lb.mixture[i][j][k].p));
-
-                    lb.mixture[i][j][k].temp = units.temp(gas->temperature());
-
+                    double r2 = sq((double)i - 0.5*Nx);
+                    lb.mixture[i][j][k].u = 0.0;
+                    lb.mixture[i][j][k].v = 0.0;
+                    lb.mixture[i][j][k].w = 0.0;
+                    lb.mixture[i][j][k].temp = T0;
+                    lb.mixture[i][j][k].p = p0 * (1.0 + amplitude * exp(-r2/(2.0*sq(width))));
                     lb.species[0][i][j][k].X = 1.0;
-                    // lb.species[1][i][j][k].X = 1.0 - lb.species[0][i][j][k].X;
-
-                    // =======================================================================================================================================
-
-                    // double r_dist_2 = pow(i-Nx/2, 2);
-                    // double core_rad_2 = pow(200, 2);
-
-                    // lb.mixture[i][j][k].u = 0.0;//0.0018;
-                    // lb.mixture[i][j][k].v = 0.0;
-                    // lb.mixture[i][j][k].w = 0.0;
-                    // lb.mixture[i][j][k].temp = units.temp(300);
-                    // lb.mixture[i][j][k].p = units.p(Cantera::OneAtm) * (1.0 + 1.0e-1 * exp(-r_dist_2/core_rad_2));//  ;  //    
-
-                    // lb.species[0][i][j][k].X = 1.0;
-
+                }
+                else if (lb.mixture[i][j][k].type == TYPE_O_C)
+                {
+                    // ghost cell holds the far-field target state of the NSCBC
+                    lb.mixture[i][j][k].u = 0.0;
+                    lb.mixture[i][j][k].v = 0.0;
+                    lb.mixture[i][j][k].w = 0.0;
+                    lb.mixture[i][j][k].temp = T0;
+                    lb.mixture[i][j][k].p = p0;
+                    lb.species[0][i][j][k].X = 1.0;
                 }
             }
         }
     }
 
-    lb.run(100000,100);
+    // sound crosses half the domain in ~ (Nx/2)/c ~ 570 steps at c ~ 0.35 lu;
+    // 2000 steps is enough for the pulse to leave and the residual to settle
+    lb.run(2000,100);
 
     // LBM lb = read_restart("restart1000000.dat");
     // lb.loop(10000000000, 100000);

@@ -157,8 +157,8 @@ void LBM::TMS_BC()
                     double rho_out = 0.0;
                     double vel_out[3] = {0.0};
                     double T_out = 0.0;
-                    double rhoa_out[nSpecies] = {0.0};
-                    double vela_out[nSpecies][3] = {0.0};
+                    double rhoa_out[nSpecies]; std::fill_n(&rhoa_out[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
+                    double vela_out[nSpecies][3]; std::fill_n(&vela_out[0][0], nSpecies*3, 0.0);   // (clang: VLAs cannot have initializers)
                     double p_out = 0.0;
 
                     int i_bdr = i-cx[l_interface];
@@ -235,8 +235,8 @@ void LBM::TMS_BC()
                     double rho_loc = 0.0;
                     double vel_loc[3] = {0.0};
                     double rhoe_loc = 0.0;
-                    double rhoa_loc[nSpecies] = {0.0};
-                    double vela_loc[nSpecies][3] = {0.0};
+                    double rhoa_loc[nSpecies]; std::fill_n(&rhoa_loc[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
+                    double vela_loc[nSpecies][3]; std::fill_n(&vela_loc[0][0], nSpecies*3, 0.0);   // (clang: VLAs cannot have initializers)
                     
                     for (int l=0; l < npop; ++l){
                         i_nb = i - cx[l];
@@ -496,7 +496,7 @@ void LBM::TMS_BC()
                         double vel_in[3] = {0.0};
                         double T_in = 0.0;
                         double rho_in = 0.0;
-                        double rhoa_in[nSpecies] = {0.0};
+                        double rhoa_in[nSpecies]; std::fill_n(&rhoa_in[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
                         double p_in = 0.0;
 
                         int i_bdr = i-cx[l_interface];
@@ -540,7 +540,7 @@ void LBM::TMS_BC()
                                 // double dv_dx    = fd_uw(mixture[i][j][k].v     , mixture[i_1][j_1][k_1].v  , mixture[i_2][j_2][k_2].v  , dx, cx[l_interface]) ;
                                 // double dw_dx    = fd_uw(mixture[i][j][k].w     , mixture[i_1][j_1][k_1].w  , mixture[i_2][j_2][k_2].w  , dx, cx[l_interface]) ;
                                 double dp_dx    = fd_uw(mixture[i][j][k].p     , mixture[i_1][j_1][k_1].p  , mixture[i_2][j_2][k_2].p  , dx, cx[l_interface]) ;
-                                double dYa_dx[nSpecies] = {};
+                                double dYa_dx[nSpecies]; std::fill_n(&dYa_dx[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
                                 for(size_t a = 0; a < nSpecies; ++a){
                                     dYa_dx[a] = fd_uw(species[a][i][j][k].rho/mixture[i][j][k].rho, species[a][i_1][j_1][k_1].rho/mixture[i_1][j_1][k_1].rho, species[a][i_2][j_2][k_2].rho/mixture[i_2][j_2][k_2].rho, dx, cx[l_interface]);                            
                                 }
@@ -586,7 +586,7 @@ void LBM::TMS_BC()
                                 double dv_dx    = fd_uw(mixture[i][j][k].v     , mixture[i_1][j_1][k_1].v  , mixture[i_2][j_2][k_2].v  , dy, cy[l_interface]) ;
                                 // double dw_dx    = fd_uw(mixture[i][j][k].w     , mixture[i_1][j_1][k_1].w  , mixture[i_2][j_2][k_2].w  , dy, cy[l_interface]) ;
                                 double dp_dx    = fd_uw(mixture[i][j][k].p     , mixture[i_1][j_1][k_1].p  , mixture[i_2][j_2][k_2].p  , dy, cy[l_interface]) ;
-                                double dYa_dx[nSpecies] = {};
+                                double dYa_dx[nSpecies]; std::fill_n(&dYa_dx[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
                                 for(size_t a = 0; a < nSpecies; ++a){
                                     dYa_dx[a] = fd_uw(species[a][i][j][k].rho/mixture[i][j][k].rho, species[a][i_1][j_1][k_1].rho/mixture[i_1][j_1][k_1].rho, species[a][i_2][j_2][k_2].rho/mixture[i_2][j_2][k_2].rho, dy, cy[l_interface]);
                                 }
@@ -630,7 +630,7 @@ void LBM::TMS_BC()
                                 // double dv_dx    = fd_uw(mixture[i][j][k].v     , mixture[i_1][j_1][k_1].v  , mixture[i_2][j_2][k_2].v  , dz, cz[l_interface]) ;
                                 double dw_dx    = fd_uw(mixture[i][j][k].w     , mixture[i_1][j_1][k_1].w  , mixture[i_2][j_2][k_2].w  , dz, cz[l_interface]) ;
                                 double dp_dx    = fd_uw(mixture[i][j][k].p     , mixture[i_1][j_1][k_1].p  , mixture[i_2][j_2][k_2].p  , dz, cz[l_interface]) ;
-                                double dYa_dx[nSpecies] = {};
+                                double dYa_dx[nSpecies]; std::fill_n(&dYa_dx[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
                                 for(size_t a = 0; a < nSpecies; ++a){
                                     dYa_dx[a] = fd_uw(species[a][i][j][k].rho/mixture[i][j][k].rho, species[a][i_1][j_1][k_1].rho/mixture[i_1][j_1][k_1].rho, species[a][i_2][j_2][k_2].rho/mixture[i_2][j_2][k_2].rho, dz, cz[l_interface]);
                                 }
@@ -696,8 +696,8 @@ void LBM::TMS_BC()
                         double rho_loc = 0.0;
                         double vel_loc[3] = {0.0};
                         double rhoe_loc = 0.0;
-                        double rhoa_loc[nSpecies] = {0.0};
-                        double vela_loc[nSpecies][3] = {0.0};
+                        double rhoa_loc[nSpecies]; std::fill_n(&rhoa_loc[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
+                        double vela_loc[nSpecies][3]; std::fill_n(&vela_loc[0][0], nSpecies*3, 0.0);   // (clang: VLAs cannot have initializers)
                         
                         for (int l=0; l < npop; ++l){
                             i_nb = i - cx[l];
@@ -972,7 +972,7 @@ void LBM::TMS_BC()
 
                     // step 1: calculate f_tgt, g_tft, and fa_tgt
                     double rho_bb = 0.0;
-                    double rhoa_bb[nSpecies] = {0.0};
+                    double rhoa_bb[nSpecies]; std::fill_n(&rhoa_bb[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
                     for (size_t a = 0; a < nSpecies; ++a){
                         for (int l=0; l < npop; ++l)
                             rhoa_bb[a] += species[a][i][j][k].f[l];
@@ -980,7 +980,7 @@ void LBM::TMS_BC()
                     }
 
                     double vel_tgt[3] = {0.0};
-                    double vela_tgt[nSpecies][3] = {0.0};
+                    double vela_tgt[nSpecies][3]; std::fill_n(&vela_tgt[0][0], nSpecies*3, 0.0);   // (clang: VLAs cannot have initializers)
                     double T_tgt = 0.0;
                     for (int l=0; l < npop; ++l){
                         if (interface_nodes[l] == true){
@@ -1014,8 +1014,8 @@ void LBM::TMS_BC()
                     double rho_loc = 0.0;
                     double vel_loc[3] = {0.0};
                     double rhoe_loc = 0.0;
-                    double rhoa_loc[nSpecies] = {0.0};
-                    double vela_loc[nSpecies][3] = {0.0};
+                    double rhoa_loc[nSpecies]; std::fill_n(&rhoa_loc[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
+                    double vela_loc[nSpecies][3]; std::fill_n(&vela_loc[0][0], nSpecies*3, 0.0);   // (clang: VLAs cannot have initializers)
                     
                     for (int l=0; l < npop; ++l){
                         i_nb = i - cx[l];
