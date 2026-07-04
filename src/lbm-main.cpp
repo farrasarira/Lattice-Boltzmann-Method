@@ -98,6 +98,21 @@ LBM::LBM(int Nx, int Ny, int Nz, std::vector<std::string> species)
     for(size_t a = 0; a < nSpecies; ++a)
     {
         speciesIdx[a] = gas->speciesIndex(speciesName[a]);
+        // speciesIndex() returns Cantera::npos when the name is not in the mechanism.
+        // This happens when the reaction mechanism loaded by the LBM constructor (above)
+        // does not match the one used by main_setup(). Fail loudly with an actionable
+        // message instead of letting molecularWeight(npos) abort deep inside Cantera.
+        if (speciesIdx[a] == Cantera::npos)
+        {
+            std::cerr << "\nERROR (LBM constructor): species \"" << speciesName[a]
+                      << "\" is not present in the reaction mechanism loaded here.\n"
+                      << "The mechanism in src/lbm-main.cpp (currently loading "
+                      << gas->nSpecies() << " species) must match the one used in your "
+                      << "main_setup() case in src/setup.cpp.\n"
+                      << "Update the Cantera::newSolution(...) call in the LBM constructor "
+                      << "to the same mechanism file/phase.\n" << std::endl;
+            std::abort();
+        }
         molarMass[a] = gas->molecularWeight(speciesIdx[a]);
     }
 }
