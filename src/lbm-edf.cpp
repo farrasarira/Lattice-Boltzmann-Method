@@ -198,7 +198,7 @@ void LBM::calculate_feq_geq(double fa_tgt[][npop], double g_tgt[], double rho_bb
 void LBM::calculate_feq_geq(double fa_tgt[][npop], double g_tgt[], double rho_bb, double rhoa_bb[], double vel_tgt[], double temp_tgt)
 {   
 
-    double vela_tgt [nSpecies][3] = {0.0};
+    double vela_tgt[nSpecies][3]; std::fill_n(&vela_tgt[0][0], nSpecies*3, 0.0);   // (clang: VLAs cannot have initializers)
     for (size_t a = 0; a < nSpecies; ++a){
         vela_tgt[a][0] = vel_tgt[0];
         vela_tgt[a][1] = vel_tgt[1];
