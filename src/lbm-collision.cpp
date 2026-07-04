@@ -405,10 +405,10 @@ void LBM::Collide_Species()
                     gas->setState_TD(units.si_temp(mixture[i][j][k].temp), units.si_rho(mixture[i][j][k].rho));
 
                     trans->getSpeciesViscosities(&spec_visc[0]);
-                    double visc_a[nSpecies] = {0.0};
-                    double omega_a[nSpecies] = {0.0};
+                    double visc_a[nSpecies]; std::fill_n(&visc_a[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
+                    double omega_a[nSpecies]; std::fill_n(&omega_a[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
 
-                    double phi[nSpecies][nSpecies] = {0.0};
+                    double phi[nSpecies][nSpecies]; std::fill_n(&phi[0][0], nSpecies*nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
                     for(size_t a = 0; a < nSpecies; ++a){
                         for(size_t b = a; b < nSpecies; ++b){
                             size_t idx_a = speciesIdx[a];
@@ -443,12 +443,12 @@ void LBM::Collide_Species()
                         }
                     }
 
-                    double ux[nSpecies] = {};
-                    double uy[nSpecies] = {};
-                    double uz[nSpecies] = {};
-                    double fx[nSpecies] = {};
-                    double fy[nSpecies] = {};
-                    double fz[nSpecies] = {};
+                    double ux[nSpecies]; std::fill_n(&ux[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
+                    double uy[nSpecies]; std::fill_n(&uy[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
+                    double uz[nSpecies]; std::fill_n(&uz[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
+                    double fx[nSpecies]; std::fill_n(&fx[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
+                    double fy[nSpecies]; std::fill_n(&fy[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
+                    double fz[nSpecies]; std::fill_n(&fz[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
                     for(size_t a = 0; a < nSpecies; ++a){ 
 
                         for(size_t l = 0; l < npop; ++l){
