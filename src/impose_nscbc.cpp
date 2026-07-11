@@ -51,7 +51,7 @@
 // additionally modify the transverse terms at edges/corners; the summation used
 // here is the simpler, robust variant.
 static void nscbc_accumulate(LBM& lb, int i, int j, int k, int idir, int isign,
-    size_t nSpecies,
+    size_t nSpecies, int bmask,
     double& drho_dt, double& du_dt, double& dv_dt, double& dw_dt, double& dp_dt, double* dYdt)
 {
     const int dxyz[3] = { lb.get_dx(), lb.get_dy(), lb.get_dz() };
@@ -66,13 +66,22 @@ static void nscbc_accumulate(LBM& lb, int i, int j, int k, int idir, int isign,
     normal_derivative(lb, i, j, k, idir, isign, dxyz[nrm], dP[nrm], dU[nrm], dV[nrm], dW[nrm], dR[nrm], dYn.data(), nSpecies);
 
     bool have_transverse = false;
+    #if NSCBC_TRANSVERSE
     for (int t = 0; t < 3; ++t){
         if (t == nrm) continue;
         if (Ntan[t] > 3){
             tangential_derivative(lb, i, j, k, t+1, dxyz[t], dP[t], dU[t], dV[t], dW[t], dR[t], dYt.data(), nSpecies);
             have_transverse = true;
+            // Lodato edge/corner coupling: if this tangential direction is ITSELF a
+            // boundary normal (edge/corner cell), its flux is already handled by its
+            // own characteristic treatment, so weight its transverse contribution.
+            if (bmask & (1 << t)){
+                dP[t] *= NSCBC_EDGE_FACTOR; dU[t] *= NSCBC_EDGE_FACTOR;
+                dV[t] *= NSCBC_EDGE_FACTOR; dW[t] *= NSCBC_EDGE_FACTOR; dR[t] *= NSCBC_EDGE_FACTOR;
+            }
         }
     }
+    #endif
 
     double T1 = 0.0, T2 = 0.0, T3 = 0.0, T4 = 0.0, T5 = 0.0;
     if (have_transverse)
@@ -130,13 +139,20 @@ void impose_NSCBC(LBM& lb, int i, int j, int k, int l_interface, double &rho_out
         {-1,0,0,1}, {+1,0,0,1},
         {0,-1,0,2}, {0,+1,0,2},
         {0,0,-1,3}, {0,0,+1,3} };
+    // first pass: which axes carry a characteristic boundary (for edge/corner coupling)
+    int bmask = 0;
+    for (int n = 0; n < 6; ++n){
+        int in = i+off[n][0], jn = j+off[n][1], kn = k+off[n][2];
+        short t = lb.mixture[in][jn][kn].type;
+        if (t == TYPE_O_C || t == TYPE_I_C) bmask |= (1 << (off[n][3]-1));
+    }
     int ndir = 0;
     for (int n = 0; n < 6; ++n){
         int in = i+off[n][0], jn = j+off[n][1], kn = k+off[n][2];
         short t = lb.mixture[in][jn][kn].type;
         if (t == TYPE_O_C || t == TYPE_I_C){
             int s = off[n][0] + off[n][1] + off[n][2];   // -1 or +1 (the non-zero offset)
-            nscbc_accumulate(lb, i, j, k, off[n][3], -s, nSpecies,
+            nscbc_accumulate(lb, i, j, k, off[n][3], -s, nSpecies, bmask,
                              drho_dt, du_dt, dv_dt, dw_dt, dp_dt, dYdt.data());
             ++ndir;
         }
@@ -451,7 +467,10 @@ void compute_waves(LBM& lb,
     else                un_target = lb.mixture[ib][jb][kb].w;
 
     // transverse damping factor (Yoo & Im 2007: beta = Mach number)
-    const double beta = mach;
+    // transverse-term relaxation coefficient (Yoo & Im): the incoming wave keeps
+    // (1-beta) of the transverse terms. beta = local Mach is the Yoo-Im default;
+    // a fixed value can be forced through NSCBC_BETA (>= 0).
+    const double beta = (NSCBC_BETA < 0.0) ? mach : NSCBC_BETA;
 
     // ------- interior (numerical) LODI waves along the boundary normal -------
     // acoustic waves
