@@ -103,6 +103,16 @@
     #ifndef NSCBC_SIGMA_OUT
     #define NSCBC_SIGMA_OUT 0.25    // outflow pressure relaxation (Rudy & Strikwerda; 0 = perfectly non-reflecting, pressure may drift)
     #endif
+    #ifndef NSCBC_TRANSVERSE
+    #define NSCBC_TRANSVERSE 1      // 1 = include transverse (Yoo & Im) terms for oblique waves; 0 = plane-wave LODI (Poinsot & Lele)
+    #endif
+    #ifndef NSCBC_BETA
+    #define NSCBC_BETA (-1.0)       // transverse damping: <0 => beta = local Mach (Yoo & Im); else a fixed value in [0,1]
+    #endif
+    #ifndef NSCBC_EDGE_FACTOR
+    #define NSCBC_EDGE_FACTOR 1.0   // edge/corner coupling (Lodato et al. 2008): weight of transverse terms taken along a
+                                    // tangential direction that is ITSELF a boundary. 1 = summation, 0 = fully decoupled.
+    #endif
     #ifndef NSCBC_RELAX_U
     #define NSCBC_RELAX_U 0.20      // inflow velocity relaxation strength
     #endif
