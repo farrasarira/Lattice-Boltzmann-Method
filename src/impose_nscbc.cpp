@@ -42,65 +42,132 @@
 
 #ifdef MULTICOMP
 
-void impose_NSCBC(LBM& lb, int i, int j, int k, int l_interface, double &rho_out, double rhoa_out[], double vel_out[], double &T_out )
+// Accumulate the LODI time-derivatives contributed by ONE boundary-normal
+// direction (idir = 1,2,3; isign points from the boundary into the domain).
+// Faces (1 normal), edges (2) and corners (3) are then handled uniformly by
+// summing the locally-1D characteristic contributions of every incident face
+// (Poinsot & Lele 1992; the summation corner treatment). The fully-coupled
+// edge/corner formulation of Lodato, Domingo & Vervisch, JCP 227 (2008) would
+// additionally modify the transverse terms at edges/corners; the summation used
+// here is the simpler, robust variant.
+static void nscbc_accumulate(LBM& lb, int i, int j, int k, int idir, int isign,
+    size_t nSpecies,
+    double& drho_dt, double& du_dt, double& dv_dt, double& dw_dt, double& dp_dt, double* dYdt)
 {
-    size_t nSpecies = lb.get_nSpecies();
+    const int dxyz[3] = { lb.get_dx(), lb.get_dy(), lb.get_dz() };
+    const int Ntan[3] = { lb.get_NX(), lb.get_NY(), lb.get_NZ() };
+    const int nrm = idir - 1;   // 0,1,2 normal-direction index
 
-    // derivatives along each coordinate direction (normal + transverse)
-    double dpdx = 0.0, dudx = 0.0, dvdx = 0.0, dwdx = 0.0, drhodx = 0.0;
-    double dpdy = 0.0, dudy = 0.0, dvdy = 0.0, dwdy = 0.0, drhody = 0.0;
-    double dpdz = 0.0, dudz = 0.0, dvdz = 0.0, dwdz = 0.0, drhodz = 0.0;
-    std::vector<double> dYdx(nSpecies, 0.0), dYdy(nSpecies, 0.0), dYdz(nSpecies, 0.0);
-    int dx = lb.get_dx(); int dy = lb.get_dy(); int dz = lb.get_dz();
+    // derivatives in all three directions; normal one is filled by
+    // normal_derivative, the two tangential ones by tangential_derivative
+    double dP[3] = {0.,0.,0.}, dU[3] = {0.,0.,0.}, dV[3] = {0.,0.,0.}, dW[3] = {0.,0.,0.}, dR[3] = {0.,0.,0.};
+    std::vector<double> dYn(nSpecies, 0.0), dYt(nSpecies, 0.0);
+
+    normal_derivative(lb, i, j, k, idir, isign, dxyz[nrm], dP[nrm], dU[nrm], dV[nrm], dW[nrm], dR[nrm], dYn.data(), nSpecies);
+
+    bool have_transverse = false;
+    for (int t = 0; t < 3; ++t){
+        if (t == nrm) continue;
+        if (Ntan[t] > 3){
+            tangential_derivative(lb, i, j, k, t+1, dxyz[t], dP[t], dU[t], dV[t], dW[t], dR[t], dYt.data(), nSpecies);
+            have_transverse = true;
+        }
+    }
 
     double T1 = 0.0, T2 = 0.0, T3 = 0.0, T4 = 0.0, T5 = 0.0;
+    if (have_transverse)
+        compute_tranverse_terms(lb, i, j, k, idir, T1, T2, T3, T4, T5,
+            dP[0], dU[0], dV[0], dW[0], dR[0],
+            dP[1], dU[1], dV[1], dW[1], dR[1],
+            dP[2], dU[2], dV[2], dW[2], dR[2]);
+
     double L1 = 0.0, L2 = 0.0, L3 = 0.0, L4 = 0.0, L5 = 0.0;
     std::vector<double> L6(nSpecies, 0.0);
+    compute_waves(lb, i, j, k, idir, isign, T1, T2, T3, T4, T5, L1, L2, L3, L4, L5, L6.data(),
+                  dP[nrm], dU[nrm], dV[nrm], dW[nrm], dR[nrm], dYn.data());
 
-    if (cx[l_interface] != 0){
-        // x-normal boundary
-        normal_derivative(lb, i, j, k, 1, cx[l_interface], dx, dpdx, dudx, dvdx, dwdx, drhodx, dYdx.data(), nSpecies);
+    // frozen mixture sound speed of the boundary cell
+    int rank = omp_get_thread_num();
+    auto gas = sols[rank]->thermo();
+    const std::vector<size_t>& speciesIdx = lb.get_speciesIdx();
+    std::vector<double> Y (lb.get_nSpeciesCantera(), 0.0);
+    for(size_t a = 0; a < nSpecies; ++a) Y[speciesIdx[a]] = lb.species[a][i][j][k].rho / lb.mixture[i][j][k].rho;
+    gas->setMassFractions(&Y[0]);
+    gas->setState_DP(units.si_rho(lb.mixture[i][j][k].rho), units.si_p(lb.mixture[i][j][k].p));
+    const double c   = units.u(gas->soundSpeed());
+    const double rho = lb.mixture[i][j][k].rho;
 
-        // transverse terms (Yoo & Im) only when the domain is resolved in the
-        // tangential directions
-        if (lb.get_NY() > 3)
-            tangential_derivative(lb, i, j, k, 2, dy, dpdy, dudy, dvdy, dwdy, drhody, dYdy.data(), nSpecies);
-        if (lb.get_NZ() > 3)
-            tangential_derivative(lb, i, j, k, 3, dz, dpdz, dudz, dvdz, dwdz, drhodz, dYdz.data(), nSpecies);
-        if (lb.get_NY() > 3 || lb.get_NZ() > 3)
-            compute_tranverse_terms(lb, i, j, k, 1, T1, T2, T3, T4, T5, dpdx, dudx, dvdx, dwdx, drhodx, dpdy, dudy, dvdy, dwdy, drhody, dpdz, dudz, dvdz, dwdz, drhodz);
-
-        compute_waves(lb, i, j, k, 1, cx[l_interface], T1, T2, T3, T4, T5, L1, L2, L3, L4, L5, L6.data(), dpdx, dudx, dvdx, dwdx, drhodx, dYdx.data());
-        update_bc_cells(lb, i, j, k, 1, cx[l_interface], L1, L2, L3, L4, L5, L6.data(), rho_out, rhoa_out, vel_out, T_out);
+    // characteristic waves -> conservative time-derivatives (Poinsot & Lele)
+    const double dun = (L5 - L1) / (2.0 * c * rho);
+    if (idir == 1){
+        drho_dt += (L2 + 0.5*(L1 + L5)) / (c*c);
+        du_dt   += dun;   dv_dt += L3;   dw_dt += L4;
+    } else if (idir == 2){
+        drho_dt += (L3 + 0.5*(L1 + L5)) / (c*c);
+        du_dt   += L2;    dv_dt += dun;  dw_dt += L4;
+    } else {
+        drho_dt += (L4 + 0.5*(L1 + L5)) / (c*c);
+        du_dt   += L2;    dv_dt += L3;   dw_dt += dun;
     }
-    else if (cy[l_interface] != 0){
-        // y-normal boundary
-        normal_derivative(lb, i, j, k, 2, cy[l_interface], dy, dpdy, dudy, dvdy, dwdy, drhody, dYdy.data(), nSpecies);
+    dp_dt += 0.5*(L1 + L5);
+    for (size_t a = 0; a < nSpecies; ++a) dYdt[a] += L6[a];
+}
 
-        if (lb.get_NX() > 3)
-            tangential_derivative(lb, i, j, k, 1, dx, dpdx, dudx, dvdx, dwdx, drhodx, dYdx.data(), nSpecies);
-        if (lb.get_NZ() > 3)
-            tangential_derivative(lb, i, j, k, 3, dz, dpdz, dudz, dvdz, dwdz, drhodz, dYdz.data(), nSpecies);
-        if (lb.get_NX() > 3 || lb.get_NZ() > 3)
-            compute_tranverse_terms(lb, i, j, k, 2, T1, T2, T3, T4, T5, dpdx, dudx, dvdx, dwdx, drhodx, dpdy, dudy, dvdy, dwdy, drhody, dpdz, dudz, dvdz, dwdz, drhodz);
+void impose_NSCBC(LBM& lb, int i, int j, int k, int l_interface, double &rho_out, double rhoa_out[], double vel_out[], double &T_out )
+{
+    (void) l_interface;   // direction(s) are detected here from the neighbourhood,
+                          // so the same routine serves faces, edges and corners
+    size_t nSpecies = lb.get_nSpecies();
 
-        compute_waves(lb, i, j, k, 2, cy[l_interface], T1, T2, T3, T4, T5, L1, L2, L3, L4, L5, L6.data(), dpdy, dudy, dvdy, dwdy, drhody, dYdy.data());
-        update_bc_cells(lb, i, j, k, 2, cy[l_interface], L1, L2, L3, L4, L5, L6.data(), rho_out, rhoa_out, vel_out, T_out);
+    // accumulated LODI time-derivatives over every incident characteristic face
+    double drho_dt = 0.0, du_dt = 0.0, dv_dt = 0.0, dw_dt = 0.0, dp_dt = 0.0;
+    std::vector<double> dYdt(nSpecies, 0.0);
+
+    // scan the six axis neighbours; each characteristic ghost (TYPE_O_C / TYPE_I_C)
+    // is one boundary-normal contribution. isign points from the boundary into
+    // the domain: ghost at cell + s*e  ->  isign = -s.
+    const int off[6][4] = {  // {di,dj,dk, idir}
+        {-1,0,0,1}, {+1,0,0,1},
+        {0,-1,0,2}, {0,+1,0,2},
+        {0,0,-1,3}, {0,0,+1,3} };
+    int ndir = 0;
+    for (int n = 0; n < 6; ++n){
+        int in = i+off[n][0], jn = j+off[n][1], kn = k+off[n][2];
+        short t = lb.mixture[in][jn][kn].type;
+        if (t == TYPE_O_C || t == TYPE_I_C){
+            int s = off[n][0] + off[n][1] + off[n][2];   // -1 or +1 (the non-zero offset)
+            nscbc_accumulate(lb, i, j, k, off[n][3], -s, nSpecies,
+                             drho_dt, du_dt, dv_dt, dw_dt, dp_dt, dYdt.data());
+            ++ndir;
+        }
     }
-    else if (cz[l_interface] != 0){
-        // z-normal boundary
-        normal_derivative(lb, i, j, k, 3, cz[l_interface], dz, dpdz, dudz, dvdz, dwdz, drhodz, dYdz.data(), nSpecies);
-
-        if (lb.get_NX() > 3)
-            tangential_derivative(lb, i, j, k, 1, dx, dpdx, dudx, dvdx, dwdx, drhodx, dYdx.data(), nSpecies);
-        if (lb.get_NY() > 3)
-            tangential_derivative(lb, i, j, k, 2, dy, dpdy, dudy, dvdy, dwdy, drhody, dYdy.data(), nSpecies);
-        if (lb.get_NX() > 3 || lb.get_NY() > 3)
-            compute_tranverse_terms(lb, i, j, k, 3, T1, T2, T3, T4, T5, dpdx, dudx, dvdx, dwdx, drhodx, dpdy, dudy, dvdy, dwdy, drhody, dpdz, dudz, dvdz, dwdz, drhodz);
-
-        compute_waves(lb, i, j, k, 3, cz[l_interface], T1, T2, T3, T4, T5, L1, L2, L3, L4, L5, L6.data(), dpdz, dudz, dvdz, dwdz, drhodz, dYdz.data());
-        update_bc_cells(lb, i, j, k, 3, cz[l_interface], L1, L2, L3, L4, L5, L6.data(), rho_out, rhoa_out, vel_out, T_out);
+    if (ndir == 0){   // should not happen, but stay safe: hold the current state
+        rho_out = lb.mixture[i][j][k].rho;
+        vel_out[0] = lb.mixture[i][j][k].u; vel_out[1] = lb.mixture[i][j][k].v; vel_out[2] = lb.mixture[i][j][k].w;
+        T_out = lb.mixture[i][j][k].temp;
+        for (size_t a = 0; a < nSpecies; ++a) rhoa_out[a] = lb.species[a][i][j][k].rho;
+        return;
     }
+
+    // single integration of the summed contributions
+    const double dt_sim = lb.get_dtsim();
+    rho_out    = lb.mixture[i][j][k].rho - dt_sim * drho_dt;
+    vel_out[0] = lb.mixture[i][j][k].u   - dt_sim * du_dt;
+    vel_out[1] = lb.mixture[i][j][k].v   - dt_sim * dv_dt;
+    vel_out[2] = lb.mixture[i][j][k].w   - dt_sim * dw_dt;
+    const double p_out = lb.mixture[i][j][k].p - dt_sim * dp_dt;
+    for (size_t a = 0; a < nSpecies; ++a)
+        rhoa_out[a] = (lb.species[a][i][j][k].rho/lb.mixture[i][j][k].rho - dt_sim*dYdt[a]) * rho_out;
+
+    // temperature from the mixture equation of state (closure of Baum et al.)
+    int rank = omp_get_thread_num();
+    auto gas = sols[rank]->thermo();
+    const std::vector<size_t>& speciesIdx = lb.get_speciesIdx();
+    std::vector<double> Y (lb.get_nSpeciesCantera(), 0.0);
+    for(size_t a = 0; a < nSpecies; ++a) Y[speciesIdx[a]] = rhoa_out[a] / rho_out;
+    gas->setMassFractions(&Y[0]);
+    gas->setState_DP(units.si_rho(rho_out), units.si_p(p_out));
+    T_out = units.temp(gas->temperature());
 }
 
 
@@ -476,72 +543,4 @@ void compute_waves(LBM& lb,
     }
 }
 
-void update_bc_cells(LBM& lb,
-    int i, int j, int k, int idir, int isign,
-    double L1, double L2, double L3, double L4, double L5, double L6[],
-    double &rho_out, double rhoa_out[], double vel_out[], double &T_out)
-{
-
-    // Validate idir and isign
-    if (idir < 1 || idir > 3) {
-        throw std::invalid_argument("Problem with idir in compute_waves");
-    }
-    if (isign != 1 && isign != -1) {
-        throw std::invalid_argument("Problem with isign in compute_waves");
-    }
-
-    size_t nSpecies = lb.get_nSpecies();
-    const std::vector<size_t>& speciesIdx = lb.get_speciesIdx();
-
-    int rank = omp_get_thread_num();
-    auto gas = sols[rank]->thermo();   
-    std::vector <double> Y (lb.get_nSpeciesCantera());
-    for(size_t a = 0; a < nSpecies; ++a) Y[speciesIdx[a]] = lb.species[a][i][j][k].rho / lb.mixture[i][j][k].rho;
-    gas->setMassFractions(&Y[0]);
-    gas->setState_DP(units.si_rho(lb.mixture[i][j][k].rho), units.si_p(lb.mixture[i][j][k].p));
-
-    double soundSpeed = units.u(gas->soundSpeed());
-
-    double drho = 0.0, du = 0.0, dv = 0.0, dw = 0.0, dp = 0.0;
-
-    double dt_sim = lb.get_dtsim();
-
-    if (idir == 1) {
-        drho = (L2 + 0.5 * (L1 + L5)) / (soundSpeed * soundSpeed);
-        du = (L5 - L1) / (2.0 * soundSpeed * lb.mixture[i][j][k].rho);
-        dv = L3;
-        dw = L4;
-        dp = 0.5 * (L1 + L5);
-    } else if (idir == 2) {
-        drho = (L3 + 0.5 * (L1 + L5)) / (soundSpeed * soundSpeed);
-        du = L2;
-        dv = (L5 - L1) / (2.0 * soundSpeed * lb.mixture[i][j][k].rho);
-        dw = L4;
-        dp = 0.5 * (L1 + L5);
-    } else if (idir == 3) {
-        drho = (L4 + 0.5 * (L1 + L5)) / (soundSpeed * soundSpeed);
-        du = L2;
-        dv = L3;
-        dw = (L5 - L1) / (2.0 * soundSpeed * lb.mixture[i][j][k].rho);
-        dp = 0.5 * (L1 + L5);
-    }
-
-    rho_out = lb.mixture[i][j][k].rho - dt_sim * drho;
-    vel_out[0] = lb.mixture[i][j][k].u - dt_sim * du;
-    vel_out[1] = lb.mixture[i][j][k].v - dt_sim * dv;
-    vel_out[2] = lb.mixture[i][j][k].w - dt_sim * dw;
-    double p_out = lb.mixture[i][j][k].p - dt_sim * dp;
-
-    for(size_t a = 0; a < nSpecies; ++a)
-        rhoa_out[a] = (lb.species[a][i][j][k].rho/lb.mixture[i][j][k].rho - dt_sim*L6[a]) * rho_out ;
-    
-    std::fill(Y.begin(), Y.end(), 0.0);
-    for(size_t a = 0; a < nSpecies; ++a) Y[speciesIdx[a]] = rhoa_out[a] / rho_out;
-    gas->setMassFractions(&Y[0]);
-    gas->setState_DP(units.si_rho(rho_out), units.si_p(p_out));
-
-    T_out = units.temp(gas->temperature());
-
-
-}
 #endif // MULTICOMP

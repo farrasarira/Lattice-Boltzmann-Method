@@ -3668,6 +3668,112 @@ void main_setup() // 1D multicomponent NSCBC validation: inflow + outflow with a
     lb.run(6000, 100);
 }
 
+#elif defined NSCBC_PULSE_2D
+void main_setup() // 2D NSCBC validation: radial pressure pulse leaving through characteristic outflows on ALL FOUR sides (faces + corners)
+{
+    // A Gaussian pressure pulse in the centre of a 2D box expands radially and
+    // strikes the four flat boundaries (faces) and the four corners. With the
+    // generalised NSCBC (per-face characteristic treatment summed at edges and
+    // corners) the wave should leave with little reflection; corners are the
+    // critical test of 2D/3D generality.
+    units.set_m_kg_s(1.0e-5, 2.0e-9);
+
+    int NX = 200;
+    int NY = 200;
+    int NZ = 1;
+
+    auto sol = Cantera::newSolution("h2o2.yaml", "ohmech");
+    auto gas = sol->thermo();
+
+    std::vector<std::string> species = {"N2"};
+    LBM lb(NX, NY, NZ, species);
+    int Nx = lb.get_Nx(); int Ny = lb.get_Ny(); int Nz = lb.get_Nz();
+
+    std::vector <double> X (gas->nSpecies());
+    X[gas->speciesIndex("N2")] = 1.0;
+    gas->setMoleFractions(&X[0]);
+    gas->setState_TP(300.0, Cantera::OneAtm);
+    std::cout << "sound speed (lu) : " << units.u(gas->soundSpeed()) << std::endl;
+
+    double p0 = units.p(Cantera::OneAtm);
+    double T0 = units.temp(300.0);
+    double amplitude = 0.01;      // 1% pressure pulse
+    double width = 10.0;          // Gaussian half-width [nodes]
+
+    #pragma omp parallel for schedule(dynamic)
+    for(int i = 0; i < Nx ; ++i)
+    {
+        for(int j = 0; j < Ny; ++j)
+        {
+            for(int k = 0; k < Nz; ++k)
+            {
+                if ( k==0 || k==Nz-1) lb.mixture[i][j][k].type = TYPE_P;
+                // characteristic outflow on all four lateral sides
+                if (i==0 || i==Nx-1 || j==0 || j==Ny-1) lb.mixture[i][j][k].type = TYPE_O_C;
+
+                short t = lb.mixture[i][j][k].type;
+                if (t == TYPE_F || t == TYPE_O_C)
+                {
+                    double r2 = sq((double)i - 0.5*Nx) + sq((double)j - 0.5*Ny);
+                    double ppulse = (t == TYPE_F) ? amplitude*exp(-r2/(2.0*sq(width))) : 0.0;
+
+                    lb.mixture[i][j][k].u = 0.0;
+                    lb.mixture[i][j][k].v = 0.0;
+                    lb.mixture[i][j][k].w = 0.0;
+                    lb.mixture[i][j][k].temp = T0;
+                    lb.mixture[i][j][k].p = p0 * (1.0 + ppulse);
+                    lb.species[0][i][j][k].X = 1.0;   // N2
+                }
+            }
+        }
+    }
+
+    lb.run(1500, 100);
+}
+
+#elif defined NSCBC_PULSE_3D
+void main_setup() // 3D NSCBC generality/stability: pressure pulse leaving a box with characteristic outflow on all SIX faces (12 edges, 8 corners)
+{
+    units.set_m_kg_s(1.0e-5, 2.0e-9);
+
+    int NX = 48, NY = 48, NZ = 48;
+
+    auto sol = Cantera::newSolution("h2o2.yaml", "ohmech");
+    auto gas = sol->thermo();
+    std::vector<std::string> species = {"N2"};
+    LBM lb(NX, NY, NZ, species);
+    int Nx = lb.get_Nx(); int Ny = lb.get_Ny(); int Nz = lb.get_Nz();
+
+    std::vector <double> X (gas->nSpecies());
+    X[gas->speciesIndex("N2")] = 1.0;
+    gas->setMoleFractions(&X[0]); gas->setState_TP(300.0, Cantera::OneAtm);
+
+    double p0 = units.p(Cantera::OneAtm);
+    double T0 = units.temp(300.0);
+
+    #pragma omp parallel for schedule(dynamic)
+    for(int i = 0; i < Nx ; ++i)
+        for(int j = 0; j < Ny; ++j)
+            for(int k = 0; k < Nz; ++k)
+            {
+                // characteristic outflow on all six faces (=> edges and corners)
+                if (i==0||i==Nx-1||j==0||j==Ny-1||k==0||k==Nz-1) lb.mixture[i][j][k].type = TYPE_O_C;
+
+                short t = lb.mixture[i][j][k].type;
+                if (t == TYPE_F || t == TYPE_O_C)
+                {
+                    double r2 = sq((double)i-0.5*Nx)+sq((double)j-0.5*Ny)+sq((double)k-0.5*Nz);
+                    double ppulse = (t==TYPE_F) ? 0.01*exp(-r2/(2.0*sq(6.0))) : 0.0;
+                    lb.mixture[i][j][k].u = 0.0; lb.mixture[i][j][k].v = 0.0; lb.mixture[i][j][k].w = 0.0;
+                    lb.mixture[i][j][k].temp = T0;
+                    lb.mixture[i][j][k].p = p0*(1.0+ppulse);
+                    lb.species[0][i][j][k].X = 1.0;
+                }
+            }
+
+    lb.run(400, 100);
+}
+
 #endif
 
 
