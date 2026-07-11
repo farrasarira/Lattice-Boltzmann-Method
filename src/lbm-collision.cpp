@@ -449,25 +449,48 @@ void LBM::Collide_Species()
                     double fx[nSpecies]; std::fill_n(&fx[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
                     double fy[nSpecies]; std::fill_n(&fy[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
                     double fz[nSpecies]; std::fill_n(&fz[0], nSpecies, 0.0);   // (clang: VLAs cannot have initializers)
-                    for(size_t a = 0; a < nSpecies; ++a){ 
+                    // Cap for the species drift / diffusion velocity. The species
+                    // equilibrium is centred on the species advection velocity; when a
+                    // species vanishes (Y_a -> 0) the raw ratio (sum_l f_a c_l)/rho_a
+                    // becomes an ill-posed 0/0 that can exceed the lattice range and
+                    // drive the product-form equilibrium negative. Following Sawant &
+                    // Karlin, a vanishing species is advected with the mixture velocity
+                    // and every drift is capped near the sound speed, so the equilibrium
+                    // never sees an unbounded velocity. Resolved species (X_a >= SPECIES_MIN)
+                    // are unaffected: the cap is inactive for any stable state.
+                    const double Vmax = 0.5/sqrt(3.0);   // ~ lattice sound speed
+                    for(size_t a = 0; a < nSpecies; ++a){
+
+                        if (species[a][i][j][k].X < SPECIES_MIN){
+                            // trace species: advect with the mixture, no diffusion drift
+                            ux[a] = mixture[i][j][k].u;
+                            uy[a] = mixture[i][j][k].v;
+                            uz[a] = mixture[i][j][k].w;
+                            fx[a] = 0.0; fy[a] = 0.0; fz[a] = 0.0;
+                            continue;
+                        }
 
                         for(size_t l = 0; l < npop; ++l){
                             ux[a] += species[a][i][j][k].f[l]*cx[l];
                             uy[a] += species[a][i][j][k].f[l]*cy[l];
                             uz[a] += species[a][i][j][k].f[l]*cz[l];
-                        }     
-                        ux[a] = ux[a] / species[a][i][j][k].rho;  
+                        }
+                        ux[a] = ux[a] / species[a][i][j][k].rho;
                         uy[a] = uy[a] / species[a][i][j][k].rho;
                         uz[a] = uz[a] / species[a][i][j][k].rho;
+                        // cap the drift relative to the mixture velocity (normally inactive)
+                        ux[a] = mixture[i][j][k].u + fmax(-Vmax, fmin(Vmax, ux[a]-mixture[i][j][k].u));
+                        uy[a] = mixture[i][j][k].v + fmax(-Vmax, fmin(Vmax, uy[a]-mixture[i][j][k].v));
+                        uz[a] = mixture[i][j][k].w + fmax(-Vmax, fmin(Vmax, uz[a]-mixture[i][j][k].w));
 
                         for(size_t b = 0; b < nSpecies; ++b){
                             fx[a] += -1.0 * mixture[i][j][k].p * species[a][i][j][k].X*species[b][i][j][k].X/D_ab[a][b] * (species[a][i][j][k].u - species[b][i][j][k].u);
                             fy[a] += -1.0 * mixture[i][j][k].p * species[a][i][j][k].X*species[b][i][j][k].X/D_ab[a][b] * (species[a][i][j][k].v - species[b][i][j][k].v);
                             fz[a] += -1.0 * mixture[i][j][k].p * species[a][i][j][k].X*species[b][i][j][k].X/D_ab[a][b] * (species[a][i][j][k].w - species[b][i][j][k].w);
                         }
-                        fx[a] = fx[a]*dt_sim/species[a][i][j][k].rho;
-                        fy[a] = fy[a]*dt_sim/species[a][i][j][k].rho;
-                        fz[a] = fz[a]*dt_sim/species[a][i][j][k].rho;
+                        fx[a] = fmax(-Vmax, fmin(Vmax, fx[a]*dt_sim/species[a][i][j][k].rho));
+                        fy[a] = fmax(-Vmax, fmin(Vmax, fy[a]*dt_sim/species[a][i][j][k].rho));
+                        fz[a] = fmax(-Vmax, fmin(Vmax, fz[a]*dt_sim/species[a][i][j][k].rho));
                     }
 
                     // Bouyancy ------------------------------------------------------------------------------------------------------------------------------
@@ -492,9 +515,15 @@ void LBM::Collide_Species()
                         delQdevx = fd_central(species[a][i-1][j][k].rho*species[a][i-1][j][k].u*(1.0-3.0*gas_const_a*mixture[i-1][j][k].temp)-species[a][i-1][j][k].rho*cb(species[a][i-1][j][k].u), species[a][i][j][k].rho*species[a][i][j][k].u*(1.0-3.0*gas_const_a*mixture[i][j][k].temp)-species[a][i][j][k].rho*cb(species[a][i][j][k].u), species[a][i+1][j][k].rho*species[a][i+1][j][k].u*(1.0-3.0*gas_const_a*mixture[i+1][j][k].temp)-species[a][i+1][j][k].rho*cb(species[a][i+1][j][k].u), dx, species[a][i][j][k].u, mixture[i-1][j][k].type, mixture[i+1][j][k].type);
                         delQdevy = fd_central(species[a][i][j-1][k].rho*species[a][i][j-1][k].v*(1.0-3.0*gas_const_a*mixture[i][j-1][k].temp)-species[a][i][j-1][k].rho*cb(species[a][i][j-1][k].v), species[a][i][j][k].rho*species[a][i][j][k].v*(1.0-3.0*gas_const_a*mixture[i][j][k].temp)-species[a][i][j][k].rho*cb(species[a][i][j][k].v), species[a][i][j+1][k].rho*species[a][i][j+1][k].v*(1.0-3.0*gas_const_a*mixture[i][j+1][k].temp)-species[a][i][j+1][k].rho*cb(species[a][i][j+1][k].v), dy, species[a][i][j][k].v, mixture[i][j-1][k].type, mixture[i][j+1][k].type);
                         delQdevz = fd_central(species[a][i][j][k-1].rho*species[a][i][j][k-1].w*(1.0-3.0*gas_const_a*mixture[i][j][k-1].temp)-species[a][i][j][k-1].rho*cb(species[a][i][j][k-1].w), species[a][i][j][k].rho*species[a][i][j][k].w*(1.0-3.0*gas_const_a*mixture[i][j][k].temp)-species[a][i][j][k].rho*cb(species[a][i][j][k].w), species[a][i][j][k+1].rho*species[a][i][j][k+1].w*(1.0-3.0*gas_const_a*mixture[i][j][k+1].temp)-species[a][i][j][k+1].rho*cb(species[a][i][j][k+1].w), dz, species[a][i][j][k].w, mixture[i][j][k-1].type, mixture[i][j][k+1].type);
-                        double corr[3] = {  dt_sim*(2.0-omega_a[a])/(2.0*species[a][i][j][k].rho*omega_a[a])*delQdevx,
-                                            dt_sim*(2.0-omega_a[a])/(2.0*species[a][i][j][k].rho*omega_a[a])*delQdevy,
-                                            dt_sim*(2.0-omega_a[a])/(2.0*species[a][i][j][k].rho*omega_a[a])*delQdevz};
+                        // third-order-moment correction; division by rho_a makes it
+                        // blow up for trace species, so it is disabled there (the
+                        // species carries no dynamics worth correcting in that limit)
+                        double corr[3] = {0.0, 0.0, 0.0};
+                        if (species[a][i][j][k].X >= SPECIES_MIN){
+                            corr[0] = dt_sim*(2.0-omega_a[a])/(2.0*species[a][i][j][k].rho*omega_a[a])*delQdevx;
+                            corr[1] = dt_sim*(2.0-omega_a[a])/(2.0*species[a][i][j][k].rho*omega_a[a])*delQdevy;
+                            corr[2] = dt_sim*(2.0-omega_a[a])/(2.0*species[a][i][j][k].rho*omega_a[a])*delQdevz;
+                        }
 
                         #ifdef REACTION
                         double corr_zero[3] = {0.0, 0.0, 0.0};

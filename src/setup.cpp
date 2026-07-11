@@ -3587,6 +3587,87 @@ void main_setup() // 1D NSCBC validation: Gaussian pressure pulse leaving throug
     // lb.loop(10000000000, 100000);
 }
 
+#elif defined NSCBC_SPECIES_1D
+void main_setup() // 1D multicomponent NSCBC validation: inflow + outflow with a species (mass-fraction) gradient at both ends
+{
+    // Inert O2/N2 mixture in a 1D channel, uniform inflow at x=0 (TYPE_I_C) and
+    // characteristic outflow at x=Nx-1 (TYPE_O_C). The domain is initialised with
+    // a LINEAR composition gradient from inlet to outlet, so both boundaries see a
+    // non-zero mass-fraction gradient. The inlet feeds a fixed composition; the
+    // transient composition front convects/diffuses and must leave through the
+    // outflow without spurious reflection, while the inlet holds its target
+    // composition. Steady state is a uniform mixture at the inlet composition.
+    units.set_m_kg_s(1.0e-5, 2.0e-9);
+
+    int NX = 300;
+    int NY = 1;
+    int NZ = 1;
+
+    auto sol = Cantera::newSolution("h2o2.yaml", "ohmech");
+    auto gas = sol->thermo();
+
+    std::vector<std::string> species = {"O2", "N2"};   // inert at 300 K
+    LBM lb(NX, NY, NZ, species);
+    int Nx = lb.get_Nx(); int Ny = lb.get_Ny(); int Nz = lb.get_Nz();
+
+    std::vector <double> X (gas->nSpecies());
+
+    double T0 = units.temp(300.0);
+    double p0 = units.p(Cantera::OneAtm);
+    double U0 = units.u(2.0);            // inflow velocity [lu], subsonic
+
+    // reference state for lattice-unit reporting
+    X[gas->speciesIndex("O2")] = 0.3; X[gas->speciesIndex("N2")] = 0.7;
+    gas->setMoleFractions(&X[0]); gas->setState_TP(300.0, Cantera::OneAtm);
+    std::cout << "sound speed (lu) : " << units.u(gas->soundSpeed()) << "  inflow Mach = " << 2.0/gas->soundSpeed() << std::endl;
+
+    // A SHARP O2 front that drops all the way to trace level (X_O2 -> SPECIES_MIN)
+    // over a few nodes: O2-rich near the inlet, essentially pure N2 near the
+    // outlet. This is the case that triggers the Y_a -> 0 species-velocity
+    // divergence, and it puts a strong mass-fraction gradient at both the inflow
+    // (rich) and the outflow (trace) boundaries.
+    double X_O2_hi  = 0.50;             // inlet / rich side
+    double X_O2_lo  = SPECIES_MIN;      // outlet / trace side
+    double front_x  = 0.6 * Nx;         // front location
+    double front_w  = 3.0;              // front half-width [nodes] (sharp)
+
+    #pragma omp parallel for schedule(dynamic)
+    for(int i = 0; i < Nx ; ++i)
+    {
+        for(int j = 0; j < Ny; ++j)
+        {
+            for(int k = 0; k < Nz; ++k)
+            {
+                if ( k==0 || k==Nz-1) lb.mixture[i][j][k].type = TYPE_P;
+                if ( j==0 || j==Ny-1 ) lb.mixture[i][j][k].type = TYPE_P;
+                if (i==0)      lb.mixture[i][j][k].type = TYPE_I_C;   // characteristic inflow
+                if (i==Nx-1)   lb.mixture[i][j][k].type = TYPE_O_C;   // characteristic outflow
+
+                short t = lb.mixture[i][j][k].type;
+                if (t == TYPE_F || t == TYPE_I_C || t == TYPE_O_C)
+                {
+                    // sharp tanh front, clamped to X_O2_hi at the inlet
+                    double s = 0.5*(1.0 - tanh(((double)i - front_x)/front_w));
+                    double xO2 = (t == TYPE_I_C) ? X_O2_hi
+                               : X_O2_lo + (X_O2_hi - X_O2_lo)*s;
+
+                    lb.mixture[i][j][k].u = U0;
+                    lb.mixture[i][j][k].v = 0.0;
+                    lb.mixture[i][j][k].w = 0.0;
+                    lb.mixture[i][j][k].temp = T0;
+                    lb.mixture[i][j][k].p = p0;
+                    // species vector is {"O2","N2"}: index by LOCAL position (0,1),
+                    // not by the full-mechanism gas->speciesIndex()
+                    lb.species[0][i][j][k].X = xO2;         // O2 (-> trace past the front)
+                    lb.species[1][i][j][k].X = 1.0 - xO2;   // N2
+                }
+            }
+        }
+    }
+
+    lb.run(6000, 100);
+}
+
 #endif
 
 
