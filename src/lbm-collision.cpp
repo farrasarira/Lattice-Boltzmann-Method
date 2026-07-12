@@ -3,6 +3,9 @@
 #include "units.hpp"
 #include "omp.h"
 #include "FD.hpp"
+#if defined MULTICOMP && defined REACTION && defined IMPLICIT_CHEMISTRY
+#include "cantera/zerodim.h"
+#endif
 
 
 #ifndef MULTICOMP
@@ -350,6 +353,16 @@ void LBM::Collide_Species()
     std::vector <double> d(ld * ld);
     std::vector <double> rho_a(nSpecies);
 
+    #if defined REACTION && defined IMPLICIT_CHEMISTRY
+    // one constant-volume (energy-conserving) reactor + implicit CVODES integrator
+    // per thread, reused for every cell (reset with syncState/reinitialize below)
+    Cantera::IdealGasReactor reactor;
+    reactor.insert(sols[rank]);
+    reactor.setEnergy(1);                 // adiabatic: internal energy conserved, T evolves
+    Cantera::ReactorNet rnet;
+    rnet.addReactor(reactor);
+    #endif
+
     #ifdef PARALLEL
         #pragma omp for collapse(2) schedule(dynamic)
     #endif
@@ -375,9 +388,33 @@ void LBM::Collide_Species()
                         for (size_t a = 0; a < nSpecies; ++a){
                             internal_energy = internal_energy - 0.5 * species[a][i][j][k].rho/mixture[i][j][k].rho * v_sqr(species[a][i][j][k].u, species[a][i][j][k].v, species[a][i][j][k].w);
                         }
+                        std::fill(rho_a.begin(), rho_a.end(), 0.0);
+
+                        #if defined IMPLICIT_CHEMISTRY
+                        // ---- implicit (Cantera CVODES) constant-volume chemistry ----
+                        // Set the cell to its current composition and specific internal
+                        // energy at fixed density, then integrate the homogeneous
+                        // chemistry over one LBM step. The reactor conserves U and V, so
+                        // temperature and composition evolve consistently with the energy
+                        // the LBM already transports (operator-split reaction substep).
+                        std::fill(Y.begin(), Y.end(), 0.0);
+                        for(size_t a = 0; a < nSpecies; ++a) Y[speciesIdx[a]] = species[a][i][j][k].rho / mixture[i][j][k].rho;
+                        gas->setMassFractions(&Y[0]);
+                        gas->setState_UV(units.si_energy_mass(internal_energy), 1.0/units.si_rho(mixture[i][j][k].rho), 1.0e-15);
+
+                        reactor.syncState();
+                        rnet.setInitialTime(0.0);
+                        rnet.reinitialize();
+                        rnet.advance(units.si_t(dt_sim));
+
+                        // density change of each simulated species over the step
+                        gas->getMassFractions(&Y[0]);
+                        for(size_t a = 0; a < nSpecies; ++a)
+                            rho_a[a] = Y[speciesIdx[a]] * mixture[i][j][k].rho - species[a][i][j][k].rho;
+                        #else
+                        // ---- legacy explicit 2-step Euler chemistry ----
                         size_t p = 0;
                         double maxIter = 2.0;
-                        std::fill(rho_a.begin(), rho_a.end(), 0.0);
                         do{
                             kinetics->getNetProductionRates(&w_dot[0]);
                             for (size_t a = 0; a < nSpecies; ++a){
@@ -391,6 +428,7 @@ void LBM::Collide_Species()
                             gas->setState_UV(units.si_energy_mass(internal_energy), 1.0/units.si_rho(mixture[i][j][k].rho),1.0e-15);
                             p++;
                         }while(p < maxIter);
+                        #endif
 
                         gas->getPartialMolarEnthalpies(&part_enthalpy[0]);
                         mixture[i][j][k].HRR = 0.0;

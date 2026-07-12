@@ -61,6 +61,11 @@
 
     // ################# REACTION ####################
     #define REACTION
+    // Chemistry time integration over the LBM substep:
+    //   IMPLICIT_CHEMISTRY defined -> Cantera IdealGasReactor + ReactorNet (CVODES,
+    //     stiff-stable, sub-cycles internally); recommended.
+    //   commented out          -> legacy explicit 2-step Euler integration.
+    #define IMPLICIT_CHEMISTRY
 
     // ##### CONJUGATE HEAT TRANSFER FLUID-SOLID #####
     // #define CONJUGATE

@@ -109,7 +109,7 @@
         inline float si_x(const int x) const { return (float)x*m; } // length si_x = x*[m]
         // float si_x(const float x) const { return x*m; } // length si_x = x*[m]
         // float si_M(const float M) const { return M*kg; } // mass si_M = M*[kg]
-        // float si_t(const unsigned long t) const { return (float)t*s; } // time si_t = t*[s]
+        inline float si_t(const float t) const { return t*s; } // time si_t = t*[s]
         inline float si_temp(const float temp) const {return temp*K;} // temperature
         inline float si_energy_mass(const float energy_mass) const {return energy_mass * (m*m)/(s*s);}
         inline float si_energy(const float energy_mass) const {return energy_mass * kg *(m*m)/(s*s);}
