@@ -29,6 +29,17 @@ void LBM::Streaming()
                                 for(size_t a = 0; a < nSpecies; ++a)
                                     species[a][i][j][k].f[l] = species[a][i][j][k].fpc[opposite[l]];
                             #endif
+
+                            #if defined CONJUGATE && !defined ISOTHERM
+                            // Conjugate heat transfer: momentum is bounced back (no-slip wall,
+                            // above), but the energy distribution CONDUCTS across the fluid-solid
+                            // interface, so g is streamed normally from the solid neighbour. The
+                            // solid's higher thermal conductivity is carried by its own collision
+                            // relaxation time (omega1), and the solid-side interface temperature
+                            // is reconstructed in TMS_BC; without this line heat flows only into
+                            // the solid and never back into the fluid.
+                            mixture[i][j][k].g[l] = mixture[i_nb][j_nb][k_nb].gpc[l];
+                            #endif
                         }
                         //---- Adiabatic Free-Slip Wall --------------------------
                         else if (mixture[i_nb][j_nb][k_nb].type==TYPE_FS){

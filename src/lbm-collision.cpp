@@ -180,7 +180,21 @@ void LBM::Collide()
                         // double gstr = calculate_geq(l, mixture[i][j][k].rhoe, str_heat_flux, eq_R_tensor, theta);
                         mixture[i][j][k].gpc[l] = mixture[i][j][k].g[l] + omega1*(geq-mixture[i][j][k].g[l]) + (omega-omega1)*(geq-gstr);
                         #endif
-                    }                       
+                    }
+                }
+                // TYPE_Q: fixed-temperature heat source. It is never collided or streamed,
+                // so its f/g stay frozen at the Init equilibrium (the imposed source
+                // temperature). Copy them into the post-collision arrays so that any
+                // neighbour streaming from this cell reads a defined population instead of
+                // uninitialised memory (fpc/gpc are not value-initialised).
+                else if (mixture[i][j][k].type == TYPE_Q)
+                {
+                    for(size_t l = 0; l < npop; ++l){
+                        mixture[i][j][k].fpc[l] = mixture[i][j][k].f[l];
+                        #ifndef ISOTHERM
+                        mixture[i][j][k].gpc[l] = mixture[i][j][k].g[l];
+                        #endif
+                    }
                 }
                 #endif
 
